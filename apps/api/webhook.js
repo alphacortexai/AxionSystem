@@ -931,7 +931,7 @@ app.get("/debug/respondents/:tenantId", async (req, res) => {
 app.post("/agent/send-message", async (req, res) => {
   try {
     console.log(`📨 Agent send-message request:`, req.body);
-    const { convId, body, tenantId, userName, userEmail } = req.body || {};
+    const { convId, body, tenantId, userName, userEmail, voiceNotePath } = req.body || {};
 
     if (!convId || !body || !tenantId) {
       return res
@@ -1095,7 +1095,66 @@ app.post("/agent/send-message", async (req, res) => {
       console.log(`🤖 AI turned OFF for ticket ${convId} - respondent ${agentName} is actively responding`);
     }
 
-    // 3️⃣ Send WhatsApp message via Twilio
+    // 3️⃣ Prepare optional voice note media URL (converted OGG from Storage)
+    let voiceNoteUrl = null;
+
+    if (voiceNotePath) {
+      try {
+        const bucket = admin.storage().bucket();
+
+        // Where Cloud Function writes the converted OGG
+        const oggPath = voiceNotePath
+          .replace('/voice-notes/', '/voice-notes/converted/')
+          .replace(/\.[^.]+$/, '.ogg');
+
+        const oggFile = bucket.file(oggPath);
+
+        // Small retry loop in case conversion is still finishing
+        const maxAttempts = 5;
+        const delayMs = 1000;
+
+        let exists = false;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const [fileExists] = await oggFile.exists();
+          if (fileExists) {
+            exists = true;
+            break;
+          }
+          console.log(`⏳ OGG not ready yet (attempt ${attempt}/${maxAttempts}) for`, oggPath);
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+
+        if (!exists) {
+          // Fallback: if original file exists and is already audio/ogg, use it directly
+          const originalFile = bucket.file(voiceNotePath);
+          const [origExists] = await originalFile.exists();
+
+          if (origExists) {
+            const [metadata] = await originalFile.getMetadata();
+            const ct = metadata.contentType || '';
+            if (ct === 'audio/ogg') {
+              console.log('🎧 Using original OGG file without conversion:', voiceNotePath);
+              const [signedUrl] = await originalFile.getSignedUrl({
+                action: 'read',
+                expires: Date.now() + 60 * 60 * 1000, // 1 hour
+              });
+              voiceNoteUrl = signedUrl;
+            }
+          }
+        } else {
+          const [signedUrl] = await oggFile.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 60 * 60 * 1000, // 1 hour
+          });
+          voiceNoteUrl = signedUrl;
+          console.log('🎵 Generated signed URL for voice note OGG:', oggPath);
+        }
+      } catch (voiceErr) {
+        console.error('❌ Error preparing OGG voice note URL from Storage:', voiceErr);
+      }
+    }
+
+    // 4️⃣ Send WhatsApp message via Twilio
     const companyTwilioClient = company.twilioAccountSid && company.twilioAuthToken
       ? twilio(company.twilioAccountSid, company.twilioAuthToken)
       : null;
@@ -1112,14 +1171,21 @@ app.post("/agent/send-message", async (req, res) => {
           ? company.twilioPhoneNumber
           : `whatsapp:${company.twilioPhoneNumber}`;
 
-        await companyTwilioClient.messages.create({
+        const messagePayload = {
           from: fromWhatsApp,
           to: toWhatsApp,
           body: attributedBody,
-        });
+        };
+
+        if (voiceNoteUrl) {
+          messagePayload.mediaUrl = [voiceNoteUrl];
+        }
+
+        await companyTwilioClient.messages.create(messagePayload);
 
         console.log(
-          `📤 Sent agent WhatsApp message to ${toWhatsApp}: "${body}"`
+          `📤 Sent agent WhatsApp message to ${toWhatsApp}: "${body}"` +
+          (voiceNoteUrl ? ' with voice note media' : '')
         );
       } catch (twilioErr) {
         console.error(

@@ -1,0 +1,16 @@
+{
+  "name": "axion-functions",
+  "description": "Cloud Functions for AxionSystem (voice note conversion etc.)",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "ffmpeg-static": "^5.2.0"
+  }
+}
+
+

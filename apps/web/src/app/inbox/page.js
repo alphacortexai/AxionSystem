@@ -17,7 +17,7 @@ import {
   where,
   limit,
 } from "firebase/firestore";
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, getDownloadURL, uploadBytes } from "firebase/storage";
 
 export default function InboxPage() {
   const { user, company, loading, userRole, userCompanies, respondentCompanies, selectedCompanyId, selectCompanyContext, updateRespondentStatus, updateAdminStatus } = useAuth();
@@ -1117,22 +1117,25 @@ export default function InboxPage() {
             requestData.mediaType = selectedMedia.type;
             console.log("📎 Image converted to data URL for sending");
           }
-          // For recorded audio (voice notes), convert to data URL
+          // For recorded audio (voice notes), upload to Firebase Storage for server-side conversion to OGG
           else if (recordedAudio && selectedMedia.type.startsWith('audio/') && selectedMedia.size <= 5 * 1024 * 1024) {
-            const mediaUrl = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target.result);
-              reader.readAsDataURL(selectedMedia);
+            const storage = getStorage();
+            const voicePath = `companies/${tenantId}/voice-notes/${selectedTicket.id}/voice-note-${Date.now()}`;
+            const storageRef = ref(storage, voicePath);
+
+            console.log("🎵 Uploading voice note to Storage for conversion:", {
+              path: voicePath,
+              type: selectedMedia.type,
+              size: selectedMedia.size,
             });
-            requestData.mediaUrl = mediaUrl;
-            // Normalize recorded audio MIME type for better WhatsApp/Twilio compatibility
-            if (selectedMedia.type.includes('ogg')) {
-              // Ensure we send a clean OGG/Opus type
-              requestData.mediaType = 'audio/ogg';
-            } else {
-              requestData.mediaType = selectedMedia.type;
-            }
-            console.log("🎵 Voice note converted to data URL for sending:", selectedMedia.type);
+
+            await uploadBytes(storageRef, selectedMedia, {
+              contentType: selectedMedia.type,
+            });
+
+            // Pass only the storage path; backend + Cloud Function will handle OGG conversion
+            requestData.voiceNotePath = storageRef.fullPath;
+            console.log("🎵 Voice note uploaded, Storage path:", storageRef.fullPath);
           }
           // For other audio/video files
           else if ((selectedMedia.type.startsWith('audio/') || selectedMedia.type.startsWith('video/')) && selectedMedia.size <= 5 * 1024 * 1024) {
