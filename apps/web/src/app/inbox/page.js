@@ -1106,7 +1106,7 @@ export default function InboxPage() {
           hasRecordedAudio: !!recordedAudio
         });
         try {
-          // For images smaller than 1MB, convert to data URL
+          // For images smaller than 1MB, convert to data URL (inline send to API)
           if (selectedMedia.type.startsWith('image/') && selectedMedia.size <= 1024 * 1024) {
             const mediaUrl = await new Promise((resolve) => {
               const reader = new FileReader();
@@ -1135,6 +1135,8 @@ export default function InboxPage() {
 
             // Pass only the storage path; backend + Cloud Function will handle OGG conversion
             requestData.voiceNotePath = storageRef.fullPath;
+            // We know the Cloud Function will convert this to OGG, so we can pre-set the mediaType
+            requestData.mediaType = 'audio/ogg';
             console.log("🎵 Voice note uploaded, Storage path:", storageRef.fullPath);
           }
           // For other audio/video files

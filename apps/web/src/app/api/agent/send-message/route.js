@@ -55,10 +55,67 @@ export async function POST(request) {
     }
 
     const db = admin.firestore();
-    const { convId, body, tenantId, userName, userEmail, mediaUrl, mediaType } = await request.json();
+    const parsed = await request.json();
+    const {
+      convId,
+      body,
+      tenantId,
+      userName,
+      userEmail,
+      mediaUrl: incomingMediaUrl,
+      mediaType: incomingMediaType,
+      voiceNotePath,
+    } = parsed;
+
+    let mediaUrl = incomingMediaUrl;
+    let mediaType = incomingMediaType;
 
     if (!convId || !tenantId) {
       return NextResponse.json({ error: "convId and tenantId are required" }, { status: 400 });
+    }
+
+    // If we received a Storage path for a voice note, resolve it to a signed URL for the converted OGG
+    if (!mediaUrl && voiceNotePath) {
+      try {
+        const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'axion256system.firebasestorage.app';
+        const bucket = getStorage().bucket(bucketName);
+
+        // Where the Cloud Function writes the converted OGG
+        const oggPath = voiceNotePath
+          .replace('/voice-notes/', '/voice-notes/converted/')
+          .replace(/\.[^.]+$/, '.ogg');
+
+        const oggFile = bucket.file(oggPath);
+
+        const maxAttempts = 5;
+        const delayMs = 1000;
+        let exists = false;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          const [fileExists] = await oggFile.exists();
+          if (fileExists) {
+            exists = true;
+            break;
+          }
+          console.log(`⏳ Voice note OGG not ready yet (attempt ${attempt}/${maxAttempts}) for`, oggPath);
+          await new Promise((r) => setTimeout(r, delayMs));
+        }
+
+        if (exists) {
+          const [signedUrl] = await oggFile.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 60 * 60 * 1000, // 1 hour
+          });
+          mediaUrl = signedUrl;
+          // Force media type to audio/ogg for Twilio + UI
+          mediaType = 'audio/ogg';
+          console.log('🎵 Resolved voice note OGG URL from Storage:', oggPath);
+        } else {
+          console.warn('⚠️ Voice note OGG not found after retries, falling back (no mediaUrl). Path:', oggPath);
+        }
+      } catch (err) {
+        console.error('❌ Error resolving voiceNotePath to OGG URL:', err);
+      }
     }
 
     if (!body && !mediaUrl) {
