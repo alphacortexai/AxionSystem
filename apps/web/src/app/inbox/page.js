@@ -1300,7 +1300,7 @@ export default function InboxPage() {
                 padding: '12px 24px',
                 backgroundColor: '#f5f5f5',
                 color: '#333',
-                border: '1px solid '#ddd',
+                border: '1px solid #ddd',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '16px'
