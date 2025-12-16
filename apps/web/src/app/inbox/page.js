@@ -42,7 +42,7 @@ export default function InboxPage() {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [expandedHistory, setExpandedHistory] = useState(new Set()); // Track which historical tickets are expanded
   const [showCumulativeHistory, setShowCumulativeHistory] = useState(false); // Toggle for cumulative view
-  const [showHistorySection, setShowHistorySection] = useState(true); // Toggle for showing history section
+  const [showHistorySection, setShowHistorySection] = useState(false); // Toggle for showing history section (hidden by default)
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -966,6 +966,8 @@ export default function InboxPage() {
 
         setCustomerHistory(historyTicketsData);
         setHistoricalMessages(historyWithMessages);
+        // Hide history section by default whenever a new ticket is loaded
+        setShowHistorySection(false);
       } catch (error) {
         console.error('Error loading customer history:', error);
         setCustomerHistory([]);
