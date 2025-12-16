@@ -1889,6 +1889,11 @@ export default function InboxPage() {
                         historicalMessages[historyTicket.id]?.map((msg, msgIndex) => {
                           const isAgentMessage = msg.role === 'agent';
                           const isSystemMessage = msg.from === "System";
+                          const isAIMessage =
+                            !isSystemMessage &&
+                            (msg.role === 'assistant' ||
+                             msg.role === 'ai' ||
+                             (typeof msg.from === 'string' && msg.from.toLowerCase().includes('ai')));
 
                           return (
                             <div
@@ -1905,8 +1910,10 @@ export default function InboxPage() {
                                 backgroundColor: isAgentMessage
                                   ? "#dcf8c6" // WhatsApp outgoing
                                   : isSystemMessage
-                                    ? "#f0f0f0"
-                                    : "#ffffff",
+                                    ? "#ffeef0" // very light pink-red for system
+                                    : isAIMessage
+                                      ? "#fff4e5" // very light orange-cream for AI
+                                      : "#ffffff",
                                 color: "#111b21",
                                 padding: "0.6rem 0.75rem",
                                 borderRadius: isAgentMessage
@@ -1941,8 +1948,13 @@ export default function InboxPage() {
                               marginBottom: "0.25rem"
                             }}>
                               <strong style={{
-                                color: msg.from === "System" ? "#ff9800" :
-                                       msg.role === "agent" ? "#1976d2" : "#666",
+                                color: isSystemMessage
+                                  ? "#c62828"
+                                  : isAgentMessage
+                                    ? "#075e54"
+                                    : isAIMessage
+                                      ? "#b26a00"
+                                      : "#666",
                                 fontSize: "0.75rem"
                               }}>
                                 {msg.from}
@@ -2066,6 +2078,11 @@ export default function InboxPage() {
                           {ticketMessages.map((msg, index) => {
                             const isAgentMessage = msg.role === "agent";
                             const isSystemMessage = msg.from === "System";
+                            const isAIMessage =
+                              !isSystemMessage &&
+                              (msg.role === 'assistant' ||
+                               msg.role === 'ai' ||
+                               (typeof msg.from === 'string' && msg.from.toLowerCase().includes('ai')));
 
                             return (
                               <div
@@ -2082,8 +2099,10 @@ export default function InboxPage() {
                                   backgroundColor: isAgentMessage
                                     ? "#dcf8c6"
                                     : isSystemMessage
-                                      ? "#f0f0f0"
-                                      : "#ffffff",
+                                      ? "#ffeef0"
+                                      : isAIMessage
+                                        ? "#fff4e5"
+                                        : "#ffffff",
                                   color: "#111b21",
                                   padding: "0.6rem 0.75rem",
                                   borderRadius: isAgentMessage
@@ -2100,8 +2119,13 @@ export default function InboxPage() {
                                     marginBottom: "0.25rem"
                                   }}>
                                     <strong style={{
-                                      color: isSystemMessage ? "#ff9800" :
-                                             isAgentMessage ? "#075e54" : "#666",
+                                      color: isSystemMessage
+                                        ? "#c62828"
+                                        : isAgentMessage
+                                          ? "#075e54"
+                                          : isAIMessage
+                                            ? "#b26a00"
+                                            : "#666",
                                       fontSize: "0.75rem"
                                     }}>
                                       {msg.from}
@@ -2174,10 +2198,15 @@ export default function InboxPage() {
                   </div>
                 </div>
               )}
-              {messages.map((msg) => {
+            {messages.map((msg) => {
                 console.log('🎯 Rendering message:', msg.id, 'hasMedia:', msg.hasMedia, 'media:', msg.media, 'body:', msg.body);
                 const isAgentMessage = msg.role === 'agent';
-                const isSystemMessage = msg.from === "System";
+              const isSystemMessage = msg.from === "System";
+              const isAIMessage =
+                !isSystemMessage &&
+                (msg.role === 'assistant' ||
+                 msg.role === 'ai' ||
+                 (typeof msg.from === 'string' && msg.from.toLowerCase().includes('ai')));
                 const hasContent = msg.body || msg.hasMedia;
 
                 if (!hasContent) return null;
@@ -2196,8 +2225,10 @@ export default function InboxPage() {
                       backgroundColor: isAgentMessage
                         ? "#dcf8c6" // WhatsApp outgoing
                         : isSystemMessage
-                          ? "#f0f0f0"
-                          : "#ffffff",
+                          ? "#ffeef0" // very light pink-red for system
+                          : isAIMessage
+                            ? "#fff4e5" // very light orange-cream for AI
+                            : "#ffffff",
                       color: "#111b21",
                       padding: isMobile ? "0.875rem" : "0.75rem",
                       borderRadius: isAgentMessage ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
@@ -2205,7 +2236,11 @@ export default function InboxPage() {
                       position: "relative",
                       wordWrap: "break-word",
                       animation: "slideIn 0.3s ease-out",
-                      border: isSystemMessage ? "1px solid #e5e5ea" : "1px solid rgba(0,0,0,0.06)",
+                      border: isSystemMessage
+                        ? "1px solid #ffccd1"
+                        : isAIMessage
+                          ? "1px solid #ffd8a8"
+                          : "1px solid rgba(0,0,0,0.06)",
                       backdropFilter: "blur(10px)",
                       fontSize: isMobile ? "0.9375rem" : "1rem",
                       lineHeight: "1.4",
@@ -2217,7 +2252,7 @@ export default function InboxPage() {
                         <div style={{
                           fontSize: "0.8125rem",
                           fontWeight: "600",
-                          color: "#666",
+                          color: "#c62828",
                           marginBottom: "0.25rem"
                         }}>
                     {msg.from}
