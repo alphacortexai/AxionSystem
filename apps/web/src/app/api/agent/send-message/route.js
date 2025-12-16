@@ -87,18 +87,23 @@ export async function POST(request) {
 
         const oggFile = bucket.file(oggPath);
 
-        const maxAttempts = 5;
+        const maxAttempts = 10; // Increased to 10 attempts (10 seconds total wait)
         const delayMs = 1000;
         let exists = false;
+
+        console.log(`🎵 Resolving voice note OGG from path: ${voiceNotePath} -> ${oggPath}`);
 
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
           const [fileExists] = await oggFile.exists();
           if (fileExists) {
             exists = true;
+            console.log(`✅ Voice note OGG found on attempt ${attempt}`);
             break;
           }
           console.log(`⏳ Voice note OGG not ready yet (attempt ${attempt}/${maxAttempts}) for`, oggPath);
-          await new Promise((r) => setTimeout(r, delayMs));
+          if (attempt < maxAttempts) {
+            await new Promise((r) => setTimeout(r, delayMs));
+          }
         }
 
         if (exists) {
@@ -109,17 +114,20 @@ export async function POST(request) {
           mediaUrl = signedUrl;
           // Force media type to audio/ogg for Twilio + UI
           mediaType = 'audio/ogg';
-          console.log('🎵 Resolved voice note OGG URL from Storage:', oggPath);
+          console.log('🎵 Successfully resolved voice note OGG URL from Storage:', oggPath);
         } else {
-          console.warn('⚠️ Voice note OGG not found after retries, falling back (no mediaUrl). Path:', oggPath);
+          console.warn('⚠️ Voice note OGG not found after retries. Cloud Function may still be processing. Path:', oggPath);
+          console.warn('⚠️ Message will be stored but not sent to Twilio until OGG is ready. Consider implementing retry mechanism.');
+          // Don't set mediaUrl - message will be stored but not sent to Twilio
         }
       } catch (err) {
         console.error('❌ Error resolving voiceNotePath to OGG URL:', err);
       }
     }
 
-    if (!body && !mediaUrl) {
-      return NextResponse.json({ error: "Either body text or mediaUrl is required" }, { status: 400 });
+    // Allow request if we have body text, mediaUrl, OR voiceNotePath (even if OGG conversion isn't done yet)
+    if (!body && !mediaUrl && !voiceNotePath) {
+      return NextResponse.json({ error: "Either body text, mediaUrl, or voiceNotePath is required" }, { status: 400 });
     }
 
     // Load company configuration
@@ -262,6 +270,12 @@ export async function POST(request) {
       }];
       messageData.hasMedia = true;
       console.log(`📎 Agent sending media: ${mediaUrl} (${mediaType})`);
+    } else if (voiceNotePath) {
+      // Store voiceNotePath even if OGG isn't ready yet (for potential retry)
+      messageData.voiceNotePath = voiceNotePath;
+      messageData.hasMedia = true;
+      messageData.mediaType = 'audio/ogg'; // Expected type after conversion
+      console.log(`📎 Voice note path stored (OGG conversion pending): ${voiceNotePath}`);
     }
 
     const agentMsgId = `agent-${Date.now()}`;
@@ -280,6 +294,8 @@ export async function POST(request) {
       updateData.lastMessage = body;
     } else if (mediaUrl) {
       updateData.lastMessage = mediaType ? `📎 ${mediaType.split('/')[0]} file` : '📎 Media file';
+    } else if (voiceNotePath) {
+      updateData.lastMessage = '📎 audio file';
     }
 
     await ticketRef.update(updateData);
@@ -298,6 +314,12 @@ export async function POST(request) {
         `⚠️ Company ${tenantId} Twilio not configured (missing SID/token or phone number); stored agent message but did not send WhatsApp message.`
       );
       console.warn(`Available config: SID=${!!company.twilioAccountSid}, Token=${!!company.twilioAuthToken}, Phone=${!!company.twilioPhoneNumber}`);
+    } else if (!attributedBody && !mediaUrl) {
+      // Skip Twilio sending if we don't have body or mediaUrl (e.g., voice note OGG still processing)
+      console.warn(`⚠️ Skipping Twilio send - no body text and mediaUrl not ready yet. Voice note may still be converting.`);
+      if (voiceNotePath) {
+        console.warn(`⚠️ Voice note path: ${voiceNotePath} - Cloud Function may still be processing. Message stored in Firestore.`);
+      }
     } else {
       try {
         const toWhatsApp = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;

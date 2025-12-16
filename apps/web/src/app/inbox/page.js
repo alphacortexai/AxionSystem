@@ -1073,11 +1073,6 @@ export default function InboxPage() {
     try {
       setIsSending(true);
       console.log("Sending to API:", `${apiBase}/agent/send-message`);
-      console.log("Request data:", {
-        convId: selectedTicket.id,
-        body: agentMessage.trim(),
-        tenantId
-      });
       console.log("Selected ticket details:", {
         id: selectedTicket.id,
         customerId: selectedTicket.customerId,
@@ -1134,10 +1129,12 @@ export default function InboxPage() {
             });
 
             // Pass only the storage path; backend + Cloud Function will handle OGG conversion
-            requestData.voiceNotePath = storageRef.fullPath;
+            // Use the path we constructed directly (fullPath might not be available immediately)
+            requestData.voiceNotePath = voicePath;
             // We know the Cloud Function will convert this to OGG, so we can pre-set the mediaType
             requestData.mediaType = 'audio/ogg';
-            console.log("🎵 Voice note uploaded, Storage path:", storageRef.fullPath);
+            console.log("🎵 Voice note uploaded, Storage path:", voicePath);
+            console.log("🎵 Request data will include voiceNotePath:", voicePath);
           }
           // For other audio/video files
           else if ((selectedMedia.type.startsWith('audio/') || selectedMedia.type.startsWith('video/')) && selectedMedia.size <= 5 * 1024 * 1024) {
@@ -1176,6 +1173,16 @@ export default function InboxPage() {
           return;
         }
       }
+
+      // Log final request data before sending (includes voiceNotePath if voice note was uploaded)
+      console.log("📤 Final request data being sent:", {
+        convId: requestData.convId,
+        body: requestData.body || '(empty)',
+        tenantId: requestData.tenantId,
+        voiceNotePath: requestData.voiceNotePath || '(none)',
+        mediaUrl: requestData.mediaUrl ? '(present)' : '(none)',
+        mediaType: requestData.mediaType || '(none)',
+      });
 
       const resp = await fetch(`${apiBase}/agent/send-message`, {
         method: "POST",
