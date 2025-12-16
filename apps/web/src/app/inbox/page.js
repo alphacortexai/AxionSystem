@@ -1884,28 +1884,37 @@ export default function InboxPage() {
                     {[...customerHistory]
                       .sort((a, b) => (a.updatedAt?.seconds || 0) - (b.updatedAt?.seconds || 0)) // oldest first
                       .map((historyTicket, ticketIndex) =>
-                        historicalMessages[historyTicket.id]?.map((msg, msgIndex) => (
-                          <div
-                            key={`${historyTicket.id}-${msg.id}`}
-                            style={{
-                              padding: "0.5rem 0.75rem",
-                              borderBottom: "1px solid #f5f5f5",
-                              fontSize: "0.8rem",
-                              display: "flex",
-                              justifyContent: msg.role === 'agent' ? "flex-end" : "flex-start"
-                            }}
-                          >
-                            <div style={{
-                              maxWidth: isMobile ? "85%" : "70%",
-                              backgroundColor: msg.role === 'agent' ? "#e8f0ff" : "#ffffff",
-                              color: "#1d1d1f",
-                              padding: "0.6rem 0.75rem",
-                              borderRadius: msg.role === 'agent' ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                              border: "1px solid #ededed",
-                              width: "fit-content",
-                              wordBreak: "break-word"
-                            }}>
+                        historicalMessages[historyTicket.id]?.map((msg, msgIndex) => {
+                          const isAgentMessage = msg.role === 'agent';
+                          const isSystemMessage = msg.from === "System";
+
+                          return (
+                            <div
+                              key={`${historyTicket.id}-${msg.id}`}
+                              style={{
+                                padding: "0.35rem 0.5rem",
+                                fontSize: "0.8rem",
+                                display: "flex",
+                                justifyContent: isAgentMessage ? "flex-end" : "flex-start"
+                              }}
+                            >
+                              <div style={{
+                                maxWidth: isMobile ? "80%" : "65%",
+                                backgroundColor: isAgentMessage
+                                  ? "#dcf8c6" // WhatsApp outgoing
+                                  : isSystemMessage
+                                    ? "#f0f0f0"
+                                    : "#ffffff",
+                                color: "#111b21",
+                                padding: "0.6rem 0.75rem",
+                                borderRadius: isAgentMessage
+                                  ? "16px 16px 4px 16px"
+                                  : "16px 16px 16px 4px",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                                border: "1px solid rgba(0,0,0,0.06)",
+                                width: "fit-content",
+                                wordBreak: "break-word"
+                              }}>
                             {msgIndex === 0 && (
                               <div style={{
                                 fontSize: "0.7rem",
@@ -1946,7 +1955,8 @@ export default function InboxPage() {
                             {renderMessageContent(msg)}
                             </div>
                           </div>
-                        ))
+                          );
+                        })
                       )}
                   </div>
                 </div>
@@ -2051,44 +2061,61 @@ export default function InboxPage() {
                       {/* Expandable Messages */}
                       {isExpanded && (
                         <div>
-                          {ticketMessages.map((msg, index) => (
-                            <div
-                              key={msg.id}
-                              style={{
-                                padding: "0.5rem 0.75rem",
-                                borderBottom: index < ticketMessages.length - 1 ? "1px solid #f0f0f0" : "none",
-                                fontSize: "0.8rem"
-                              }}
-                            >
-                              <div style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.5rem",
-                                marginBottom: "0.25rem"
-                              }}>
-                                <strong style={{
-                                  color: msg.from === "System" ? "#ff9800" :
-                                         msg.role === "agent" ? "#1976d2" : "#666",
-                                  fontSize: "0.75rem"
+                          {ticketMessages.map((msg, index) => {
+                            const isAgentMessage = msg.role === "agent";
+                            const isSystemMessage = msg.from === "System";
+
+                            return (
+                              <div
+                                key={msg.id}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: isAgentMessage ? "flex-end" : "flex-start",
+                                  padding: "0.35rem 0.5rem",
+                                  fontSize: "0.8rem"
+                                }}
+                              >
+                                <div style={{
+                                  maxWidth: isMobile ? "80%" : "65%",
+                                  backgroundColor: isAgentMessage
+                                    ? "#dcf8c6"
+                                    : isSystemMessage
+                                      ? "#f0f0f0"
+                                      : "#ffffff",
+                                  color: "#111b21",
+                                  padding: "0.6rem 0.75rem",
+                                  borderRadius: isAgentMessage
+                                    ? "16px 16px 4px 16px"
+                                    : "16px 16px 16px 4px",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                                  border: "1px solid rgba(0,0,0,0.06)",
+                                  wordBreak: "break-word"
                                 }}>
-                                  {msg.from}
-                                </strong>
-                                <span style={{
-                                  fontSize: "0.7rem",
-                                  color: "#999"
-                                }}>
-                                  {msg.createdAt ? new Date(msg.createdAt.seconds * 1000).toLocaleString() : ""}
-                                </span>
+                                  <div style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "0.5rem",
+                                    marginBottom: "0.25rem"
+                                  }}>
+                                    <strong style={{
+                                      color: isSystemMessage ? "#ff9800" :
+                                             isAgentMessage ? "#075e54" : "#666",
+                                      fontSize: "0.75rem"
+                                    }}>
+                                      {msg.from}
+                                    </strong>
+                                    <span style={{
+                                      fontSize: "0.7rem",
+                                      color: "#999"
+                                    }}>
+                                      {msg.createdAt ? new Date(msg.createdAt.seconds * 1000).toLocaleString() : ""}
+                                    </span>
+                                  </div>
+                                  {renderMessageContent(msg)}
+                                </div>
                               </div>
-                              <div style={{
-                                color: "#333",
-                                lineHeight: "1.4",
-                                wordWrap: "break-word"
-                              }}>
-                                {renderMessageContent(msg)}
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -2164,15 +2191,19 @@ export default function InboxPage() {
                     {/* Message Bubble */}
                     <div style={{
                       maxWidth: isMobile ? "280px" : "400px",
-                      backgroundColor: isAgentMessage ? "#007aff" : isSystemMessage ? "#f2f2f7" : "#ffffff",
-                      color: isAgentMessage ? "white" : "#1d1d1f",
+                      backgroundColor: isAgentMessage
+                        ? "#dcf8c6" // WhatsApp outgoing
+                        : isSystemMessage
+                          ? "#f0f0f0"
+                          : "#ffffff",
+                      color: "#111b21",
                       padding: isMobile ? "0.875rem" : "0.75rem",
                       borderRadius: isAgentMessage ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                      boxShadow: isAgentMessage ? "0 2px 8px rgba(0,122,255,0.15)" : "0 1px 3px rgba(0,0,0,0.08)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
                       position: "relative",
                       wordWrap: "break-word",
                       animation: "slideIn 0.3s ease-out",
-                      border: isSystemMessage ? "1px solid #e5e5ea" : "none",
+                      border: isSystemMessage ? "1px solid #e5e5ea" : "1px solid rgba(0,0,0,0.06)",
                       backdropFilter: "blur(10px)",
                       fontSize: isMobile ? "0.9375rem" : "1rem",
                       lineHeight: "1.4",
