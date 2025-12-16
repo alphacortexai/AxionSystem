@@ -1243,6 +1243,21 @@ export default function InboxPage() {
     }
   }
 
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+      if (window.innerWidth > 768) {
+        setSidebarOpen(true); // Always open on desktop
+      } else {
+        setSidebarOpen(false); // Closed by default on mobile
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   if (loading || !company) {
     if (loadingTimeout) {
       return (
@@ -1285,7 +1300,7 @@ export default function InboxPage() {
                 padding: '12px 24px',
                 backgroundColor: '#f5f5f5',
                 color: '#333',
-                border: '1px solid #ddd',
+                border: '1px solid '#ddd',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '16px'
@@ -1314,21 +1329,6 @@ export default function InboxPage() {
       </div>
     );
   }
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-      if (window.innerWidth > 768) {
-        setSidebarOpen(true); // Always open on desktop
-      } else {
-        setSidebarOpen(false); // Closed by default on mobile
-      }
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   return (
     <div style={{
