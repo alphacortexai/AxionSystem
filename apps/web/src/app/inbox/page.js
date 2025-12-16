@@ -24,6 +24,8 @@ export default function InboxPage() {
   const isAdmin = userRole === 'admin';
   const isRespondent = userRole === 'respondent';
   const router = useRouter();
+
+  // Core inbox state
   const [tickets, setTickets] = useState([]);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -48,6 +50,10 @@ export default function InboxPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recordingTimeout, setRecordingTimeout] = useState(null);
+
+  // Mobile responsiveness (must be declared before any early returns)
+  const [isMobile, setIsMobile] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -1308,10 +1314,6 @@ export default function InboxPage() {
       </div>
     );
   }
-
-  // Mobile responsiveness
-  const [isMobile, setIsMobile] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
