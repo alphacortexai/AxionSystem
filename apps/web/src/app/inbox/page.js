@@ -138,15 +138,13 @@ export default function InboxPage() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Prioritize MP3 (most compatible), then OGG, then WebM for WhatsApp compatibility
+      // Prefer OGG/Opus for best WhatsApp/Twilio compatibility, fall back to WebM if needed
       let mimeType = '';
       const supportedFormats = [
-        'audio/mp3',              // Most compatible for WhatsApp
-        'audio/mpeg',             // MP3 alternative
-        'audio/ogg;codecs=opus',  // WhatsApp preferred - Firefox, some Chrome
-        'audio/ogg',              // WhatsApp compatible - Firefox
-        'audio/webm;codecs=opus', // Chrome, Edge (most common)
-        'audio/webm'              // Chrome, Edge
+        'audio/ogg;codecs=opus',  // WhatsApp-preferred, where supported
+        'audio/ogg',              // Generic OGG
+        'audio/webm;codecs=opus', // Common in Chrome/Edge
+        'audio/webm'              // Fallback if nothing else
       ];
 
       for (const format of supportedFormats) {
@@ -169,12 +167,19 @@ export default function InboxPage() {
       recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: mimeType });
+        const isOgg = mimeType.includes('ogg');
+        const extension = isOgg
+          ? 'ogg'
+          : mimeType.includes('wav')
+            ? 'wav'
+            : mimeType.includes('webm')
+              ? 'webm'
+              : 'audio';
+
+        // For OGG we normalize the file type to plain 'audio/ogg' (Twilio/WhatsApp friendly)
+        const fileMimeType = isOgg ? 'audio/ogg' : mimeType;
+        const audioFile = new File([blob], `voice-note.${extension}`, { type: fileMimeType });
         const url = URL.createObjectURL(blob);
-        const extension = mimeType.includes('ogg') ? 'ogg' :
-                         mimeType.includes('mp3') || mimeType.includes('mpeg') ? 'mp3' :
-                         mimeType.includes('wav') ? 'wav' :
-                         mimeType.includes('webm') ? 'webm' : 'audio';
-        const audioFile = new File([blob], `voice-note.${extension}`, { type: mimeType });
 
         console.log("🎵 Audio recorded:", {
           size: audioFile.size,
@@ -1120,8 +1125,13 @@ export default function InboxPage() {
               reader.readAsDataURL(selectedMedia);
             });
             requestData.mediaUrl = mediaUrl;
-            // Use the actual file extension for better WhatsApp compatibility
-            requestData.mediaType = selectedMedia.type;
+            // Normalize recorded audio MIME type for better WhatsApp/Twilio compatibility
+            if (selectedMedia.type.includes('ogg')) {
+              // Ensure we send a clean OGG/Opus type
+              requestData.mediaType = 'audio/ogg';
+            } else {
+              requestData.mediaType = selectedMedia.type;
+            }
             console.log("🎵 Voice note converted to data URL for sending:", selectedMedia.type);
           }
           // For other audio/video files
