@@ -24,14 +24,13 @@ exports.convertVoiceNoteToOgg = functions.storage
     const contentType = object.contentType || '';
     const filePath = object.name; // e.g. companies/tenant/voice-notes/....webm
 
-    console.log('🧩 convertVoiceNoteToOgg triggered for', {
+    console.log('🔔 STORAGE TRIGGER: convertVoiceNoteToOgg fired!');
+    console.log('📁 File details:', {
       filePath,
       contentType,
       bucket: object.bucket,
-      fileName,
-      tempInput,
-      tempOutput,
-      convertedPath,
+      size: object.size,
+      generation: object.generation,
     });
 
     // Guard clauses: only audio in our voice-notes path, and skip already converted files
@@ -55,6 +54,8 @@ exports.convertVoiceNoteToOgg = functions.storage
       return null;
     }
 
+    console.log('✅ All guard clauses passed, proceeding with conversion...');
+
     const bucket = storage.bucket(object.bucket);
     const fileName = path.basename(filePath);
     const tempInput = path.join(os.tmpdir(), `input-${fileName}`);
@@ -65,6 +66,13 @@ exports.convertVoiceNoteToOgg = functions.storage
     const convertedPath = filePath
       .replace('/voice-notes/', '/voice-notes/converted/')
       .replace(fileName, oggName);
+
+    console.log('🧩 Conversion setup:', {
+      fileName,
+      tempInput,
+      tempOutput,
+      convertedPath,
+    });
 
     try {
       // If it's already audio/ogg, just copy to the converted folder (no re-encode)
