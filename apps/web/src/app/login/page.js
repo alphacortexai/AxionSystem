@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth-context';
 
 export default function LoginPage() {
-  const { user, userCompanies, respondentCompanies, selectedCompanyId, loading, contextLoading, signInWithGoogle } = useAuth();
+  const { user, userCompanies, respondentCompanies, selectedCompanyId, userRole, loading, contextLoading, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
