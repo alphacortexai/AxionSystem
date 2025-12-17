@@ -149,7 +149,7 @@ export default function DashboardPage() {
             }}
           >
             {/* WhatsApp */}
-            <Link href="/dashboard/whatsapp" style={{ textDecoration: 'none' }}>
+            <Link href="/inbox" style={{ textDecoration: 'none' }}>
               <div
                 style={{
                   background: 'linear-gradient(135deg, #25D366, #128C7E)',
@@ -169,7 +169,7 @@ export default function DashboardPage() {
                   <div style={{ fontSize: '1.8rem', marginBottom: '0.5rem' }}>💬</div>
                   <h3 style={{ margin: 0, fontSize: '1.1rem' }}>WhatsApp</h3>
                   <p style={{ marginTop: '0.35rem', fontSize: '0.85rem', opacity: 0.9 }}>
-                    Go to your full WhatsApp dashboard, inbox, and setup.
+                    Go directly to your WhatsApp inbox and conversations.
                   </p>
                 </div>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, marginTop: '0.5rem' }}>
