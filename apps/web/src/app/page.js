@@ -12,10 +12,8 @@ export default function HomePage() {
     if (!loading) {
       if (user && !authError) {
         router.push('/dashboard');
-      } else if (!authError) {
-        router.push('/login');
       }
-      // If there's an authError, stay on this page to show the error UI
+      // If there's an authError or no user, show the landing page
     }
   }, [user, loading, authError, router]);
 

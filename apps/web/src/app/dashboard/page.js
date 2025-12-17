@@ -11,14 +11,19 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
+      return;
     }
-  }, [user, loading, router]);
 
-  useEffect(() => {
-    if (!loading && user && (!company || !selectedCompanyId)) {
+    // Redirect respondents to user dashboard
+    if (!loading && user && userRole === 'respondent') {
+      router.push('/user-dashboard');
+      return;
+    }
+
+    if (!loading && user && userRole === 'admin' && (!company || !selectedCompanyId)) {
       router.push('/select-company');
     }
-  }, [user, loading, company, selectedCompanyId, router]);
+  }, [user, loading, userRole, company, selectedCompanyId, router]);
 
   const handleLogout = async () => {
     try {

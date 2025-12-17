@@ -4,49 +4,28 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth-context';
 
-export default function LoginPage() {
-  const { user, userCompanies, respondentCompanies, selectedCompanyId, loading, contextLoading, signInWithGoogle } = useAuth();
+export default function SignupPage() {
+  const { user, loading, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Wait for both auth loading and context loading to complete
-    if (!loading && !contextLoading && user) {
-      // Route based on user role
-      if (userRole === 'respondent') {
-        // Respondents go to user dashboard
-        router.push('/user-dashboard');
-      } else if (userRole === 'admin') {
-        // Check if admin user has multiple companies/roles
-        const allCompanies = [...userCompanies, ...respondentCompanies];
-
-        if (allCompanies.length > 1 && !selectedCompanyId) {
-          // Multiple companies - let user choose
-          router.push('/select-company');
-        } else if (allCompanies.length === 1 && !selectedCompanyId) {
-          // Single company - auto-select it
-          // The auth context useEffect will handle this
-          router.push('/dashboard');
-        } else if (allCompanies.length === 0) {
-          // No companies - needs onboarding
-          router.push('/onboarding');
-        } else {
-          // Has selected company
-          router.push('/dashboard');
-        }
-      }
+    if (!loading && user) {
+      // New users from public signup go to onboarding
+      router.push('/onboarding');
     }
-  }, [user, userCompanies, respondentCompanies, selectedCompanyId, loading, contextLoading, userRole, router]);
+  }, [user, loading, router]);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignUp = async () => {
     try {
       await signInWithGoogle();
+      // After successful signup, user will be redirected to onboarding
     } catch (error) {
-      console.error('Login failed:', error);
-      alert('Login failed. Please try again.');
+      console.error('Signup failed:', error);
+      alert('Signup failed. Please try again.');
     }
   };
 
-  if (loading || contextLoading) {
+  if (loading) {
     return (
       <div style={{
         display: 'flex',
@@ -57,10 +36,10 @@ export default function LoginPage() {
         fontSize: '18px'
       }}>
         <div style={{ marginBottom: '1rem' }}>
-          {loading ? 'Signing you in...' : 'Loading your companies...X'}
+          Creating your account...
         </div>
         <div style={{ fontSize: '14px', color: '#666' }}>
-          Setting up your workspace
+          Setting up your Axion workspace
         </div>
       </div>
     );
@@ -92,16 +71,24 @@ export default function LoginPage() {
         }}>
           Axion
         </h1>
+        <h2 style={{
+          color: '#333',
+          marginBottom: '1rem',
+          fontSize: '1.5rem',
+          fontWeight: '600'
+        }}>
+          Get Started
+        </h2>
         <p style={{
           color: '#666',
           marginBottom: '2rem',
           fontSize: '1.1rem'
         }}>
-          AI-Powered WhatsApp Assistant for Your Business
+          Create your account and start building AI-powered WhatsApp assistants for your business.
         </p>
 
         <button
-          onClick={handleGoogleSignIn}
+          onClick={handleGoogleSignUp}
           style={{
             backgroundColor: '#4285f4',
             color: 'white',
@@ -125,33 +112,42 @@ export default function LoginPage() {
             <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
             <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          Sign in with Google
+          Sign up with Google
         </button>
+
+        <div style={{
+          marginTop: '2rem',
+          padding: '1rem',
+          backgroundColor: '#f8f9fa',
+          borderRadius: '6px',
+          border: '1px solid #e9ecef'
+        }}>
+          <h3 style={{
+            margin: '0 0 0.5rem 0',
+            color: '#28a745',
+            fontSize: '1.1rem',
+            fontWeight: '600'
+          }}>
+            ✨ Full Admin Access
+          </h3>
+          <p style={{
+            margin: '0',
+            fontSize: '14px',
+            color: '#666',
+            lineHeight: '1.4'
+          }}>
+            Create and manage companies, configure integrations, invite team members, and access all Axion features.
+          </p>
+        </div>
 
         <p style={{
           marginTop: '2rem',
           fontSize: '14px',
           color: '#888'
         }}>
-          Sign in to access your Axion dashboard
+          Already have an account? <a href="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>Sign in</a>
         </p>
-
-        <div style={{
-          marginTop: '1rem',
-          textAlign: 'center'
-        }}>
-          <a href="/signup" style={{
-            color: '#1976d2',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}>
-            New to Axion? Create an account →
-          </a>
-        </div>
       </div>
     </div>
   );
 }
-
-
