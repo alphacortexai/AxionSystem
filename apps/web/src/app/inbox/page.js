@@ -47,12 +47,8 @@ export default function InboxPage() {
   const [mediaPreview, setMediaPreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  // Dropdown menu and section states
+  // Dropdown menu state
   const [showDropdownMenu, setShowDropdownMenu] = useState(false);
-  const [showSettingsSection, setShowSettingsSection] = useState(false);
-  const [showTestWebhookSection, setShowTestWebhookSection] = useState(false);
-  const [showTeamManagementSection, setShowTeamManagementSection] = useState(false);
-  const [showSetupStatusSection, setShowSetupStatusSection] = useState(false);
 
   // Mobile responsiveness (must be declared before any early returns)
   const [isMobile, setIsMobile] = useState(false);
@@ -64,7 +60,7 @@ export default function InboxPage() {
       if (showEmojiPicker && !event.target.closest('.emoji-picker')) {
         setShowEmojiPicker(false);
       }
-      if (showDropdownMenu && !event.target.closest('.dropdown-menu') && !event.target.closest('button')) {
+      if (showDropdownMenu && !event.target.closest('.dropdown-menu')) {
         setShowDropdownMenu(false);
       }
     };
@@ -1675,7 +1671,7 @@ export default function InboxPage() {
                     }}>
                       <button
                         onClick={() => {
-                          setShowSetupStatusSection(!showSetupStatusSection);
+                          router.push('/setup-status');
                           setShowDropdownMenu(false);
                         }}
                         style={{
@@ -1698,7 +1694,7 @@ export default function InboxPage() {
                       </button>
                       <button
                         onClick={() => {
-                          setShowSettingsSection(!showSettingsSection);
+                          router.push('/settings');
                           setShowDropdownMenu(false);
                         }}
                         style={{
@@ -1721,7 +1717,7 @@ export default function InboxPage() {
                       </button>
                       <button
                         onClick={() => {
-                          setShowTestWebhookSection(!showTestWebhookSection);
+                          router.push('/webhook-test');
                           setShowDropdownMenu(false);
                         }}
                         style={{
@@ -1745,7 +1741,7 @@ export default function InboxPage() {
                       {isAdmin && (
                         <button
                           onClick={() => {
-                            setShowTeamManagementSection(!showTeamManagementSection);
+                            router.push('/team-management');
                             setShowDropdownMenu(false);
                           }}
                           style={{
@@ -1880,7 +1876,7 @@ export default function InboxPage() {
                   }}>
                     <button
                       onClick={() => {
-                        setShowSetupStatusSection(!showSetupStatusSection);
+                        router.push('/setup-status');
                         setShowDropdownMenu(false);
                       }}
                       style={{
@@ -1903,7 +1899,7 @@ export default function InboxPage() {
                     </button>
                     <button
                       onClick={() => {
-                        setShowSettingsSection(!showSettingsSection);
+                        router.push('/settings');
                         setShowDropdownMenu(false);
                       }}
                       style={{
@@ -1926,7 +1922,7 @@ export default function InboxPage() {
                     </button>
                     <button
                       onClick={() => {
-                        setShowTestWebhookSection(!showTestWebhookSection);
+                        router.push('/webhook-test');
                         setShowDropdownMenu(false);
                       }}
                       style={{
@@ -1950,7 +1946,7 @@ export default function InboxPage() {
                     {isAdmin && (
                       <button
                         onClick={() => {
-                          setShowTeamManagementSection(!showTeamManagementSection);
+                          router.push('/team-management');
                           setShowDropdownMenu(false);
                         }}
                         style={{
@@ -2358,580 +2354,6 @@ export default function InboxPage() {
           )}
         </div>
 
-        {/* Management Sections */}
-        {(showSetupStatusSection || showSettingsSection || showTestWebhookSection || showTeamManagementSection) && (
-          <div style={{
-            marginTop: "1rem",
-            marginBottom: "1rem",
-            backgroundColor: "#ffffff",
-            borderRadius: "12px",
-            padding: "1.5rem",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-            border: "1px solid #e5e5ea"
-          }}>
-            {/* Setup Status Section */}
-            {showSetupStatusSection && (
-              <div style={{ marginBottom: "2rem" }}>
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem"
-                }}>
-                  <h3 style={{ margin: 0, color: "#333", fontSize: "1.2rem" }}>📊 Setup Status</h3>
-                  <button
-                    onClick={() => setShowSetupStatusSection(false)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "1.2rem",
-                      cursor: "pointer",
-                      color: "#666"
-                    }}
-                    title="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div style={{
-                  marginBottom: '1rem',
-                  fontSize: '14px',
-                  color: '#666',
-                  wordBreak: 'break-all'
-                }}>
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <strong>Company ID:</strong> {company.id}
-                  </div>
-                  <div>
-                    <strong>Webhook URL:</strong>
-                    <div style={{
-                      marginTop: '0.25rem',
-                      padding: '0.5rem',
-                      backgroundColor: '#f8f9fa',
-                      borderRadius: '4px',
-                      fontFamily: 'monospace',
-                      fontSize: '12px',
-                      wordBreak: 'break-all',
-                      border: '1px solid #e9ecef'
-                    }}>
-                      {`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/whatsapp/${company.id}`}
-                    </div>
-                  </div>
-                  {company.hasTwilioErrors && (
-                    <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#ffeaea', borderRadius: '4px', border: '1px solid #f44336' }}>
-                      <strong style={{ color: '#d32f2f' }}>⚠️ Active Delivery Issues</strong><br />
-                      <span style={{ fontSize: '12px', color: '#666' }}>
-                        Some messages are failing to send. Check your Twilio account status and webhook configuration.
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                  gap: '1rem',
-                  marginTop: '1rem'
-                }}>
-                  <div style={{
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    backgroundColor: '#ffffff',
-                    border: `1px solid ${company.twilioAccountSid ? '#34c759' : '#ff9500'}`,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: company.twilioAccountSid ? '#34c759' : '#ff9500'
-                      }} />
-                      <div style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#1d1d1f'
-                      }}>
-                        Twilio Account
-                      </div>
-                    </div>
-                    <div style={{
-                      fontSize: '0.875rem',
-                      color: company.twilioAccountSid ? '#34c759' : '#ff9500',
-                      fontWeight: '500'
-                    }}>
-                      {company.twilioAccountSid ? '✓ Configured' : '⚠️ Not configured'}
-                    </div>
-                  </div>
-
-                  <div style={{
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    backgroundColor: '#ffffff',
-                    border: `1px solid ${company.geminiApiKey ? '#34c759' : '#ff9500'}`,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: company.geminiApiKey ? '#34c759' : '#ff9500'
-                      }} />
-                      <div style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#1d1d1f'
-                      }}>
-                        Gemini API
-                      </div>
-                    </div>
-                    <div style={{
-                      fontSize: '0.875rem',
-                      color: company.geminiApiKey ? '#34c759' : '#ff9500',
-                      fontWeight: '500'
-                    }}>
-                      {company.geminiApiKey ? '✓ Configured' : '⚠️ Not configured'}
-                    </div>
-                  </div>
-
-                  <div style={{
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    backgroundColor: '#ffffff',
-                    border: `1px solid ${company.twilioPhoneNumber ? '#34c759' : '#ff9500'}`,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: company.twilioPhoneNumber ? '#34c759' : '#ff9500'
-                      }} />
-                      <div style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#1d1d1f'
-                      }}>
-                        WhatsApp Number
-                      </div>
-                    </div>
-                    <div style={{
-                      fontSize: '0.875rem',
-                      color: company.twilioPhoneNumber ? '#34c759' : '#ff9500',
-                      fontWeight: '500'
-                    }}>
-                      {company.twilioPhoneNumber ? '✓ Configured' : '⚠️ Not configured'}
-                    </div>
-                  </div>
-
-                  <div style={{
-                    padding: '1.5rem',
-                    borderRadius: '12px',
-                    backgroundColor: '#ffffff',
-                    border: `1px solid ${errorConversationCount === 0 ? '#34c759' : '#ff3b30'}`,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.5rem'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}>
-                      <div style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: errorConversationCount === 0 ? '#34c759' : '#ff3b30'
-                      }} />
-                      <div style={{
-                        fontSize: '1rem',
-                        fontWeight: '600',
-                        color: '#1d1d1f'
-                      }}>
-                        Message Delivery
-                      </div>
-                    </div>
-                    <div style={{
-                      fontSize: '0.875rem',
-                      color: errorConversationCount === 0 ? '#34c759' : '#ff3b30',
-                      fontWeight: '500'
-                    }}>
-                      {errorConversationCount === 0
-                        ? '✓ All messages delivered'
-                        : `⚠️ ${errorConversationCount} conversation${errorConversationCount > 1 ? 's' : ''} with delivery errors`
-                      }
-                    </div>
-                  </div>
-                </div>
-
-                {!isConfigured && (
-                  <div style={{
-                    marginTop: '1rem',
-                    padding: '1rem',
-                    backgroundColor: '#fff3cd',
-                    border: '1px solid #ffeaa7',
-                    borderRadius: '4px',
-                    color: '#856404'
-                  }}>
-                    ⚠️ Complete your setup in Settings to start receiving WhatsApp messages and AI responses.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Settings Section */}
-            {showSettingsSection && (
-              <div style={{ marginBottom: "2rem" }}>
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem"
-                }}>
-                  <h3 style={{ margin: 0, color: "#333", fontSize: "1.2rem" }}>⚙️ Settings</h3>
-                  <button
-                    onClick={() => setShowSettingsSection(false)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "1.2rem",
-                      cursor: "pointer",
-                      color: "#666"
-                    }}
-                    title="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <p style={{ color: "#666", marginBottom: "1.5rem" }}>
-                  Configure your API keys and tokens for WhatsApp integration.
-                </p>
-
-                <button
-                  onClick={() => router.push('/settings')}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    backgroundColor: "#1976d2",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: "pointer",
-                    fontSize: "1rem",
-                    fontWeight: "600"
-                  }}
-                >
-                  Open Settings Page →
-                </button>
-              </div>
-            )}
-
-            {/* Test Webhook Section */}
-            {showTestWebhookSection && (
-              <div style={{ marginBottom: "2rem" }}>
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem"
-                }}>
-                  <h3 style={{ margin: 0, color: "#333", fontSize: "1.2rem" }}>🔗 Test Webhook</h3>
-                  <button
-                    onClick={() => setShowTestWebhookSection(false)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "1.2rem",
-                      cursor: "pointer",
-                      color: "#666"
-                    }}
-                    title="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <p style={{ color: "#666", marginBottom: "1.5rem" }}>
-                  Test your WhatsApp webhook configuration to ensure messages are being received properly.
-                </p>
-
-                <div style={{
-                  display: 'flex',
-                  gap: '0.5rem',
-                  marginBottom: '0.5rem',
-                  flexDirection: 'row'
-                }}>
-                  <input
-                    type="text"
-                    placeholder="Enter test message..."
-                    value={testMessage}
-                    onChange={(e) => setTestMessage(e.target.value)}
-                    style={{
-                      flex: 1,
-                      padding: '0.5rem',
-                      border: '1px solid #ced4da',
-                      borderRadius: '4px',
-                      minWidth: 0
-                    }}
-                  />
-                  <button
-                    onClick={handleTestWebhook}
-                    disabled={isTesting || !testMessage.trim()}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#17a2b8',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: isTesting || !testMessage.trim() ? 'not-allowed' : 'pointer',
-                      opacity: isTesting || !testMessage.trim() ? 0.7 : 1
-                    }}
-                  >
-                    {isTesting ? 'Testing...' : 'Test Webhook'}
-                  </button>
-                </div>
-
-                {testResult && (
-                  <div style={{
-                    padding: '0.5rem',
-                    backgroundColor: testResult.success ? '#d4edda' : '#f8d7da',
-                    border: `1px solid ${testResult.success ? '#c3e6cb' : '#f5c6cb'}`,
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    color: testResult.success ? '#155724' : '#721c24'
-                  }}>
-                    <strong>Result:</strong> {testResult.success ? '✅ Webhook working!' : '❌ Error'}
-                    <pre style={{ marginTop: '0.5rem', whiteSpace: 'pre-wrap' }}>
-                      {JSON.stringify(testResult, null, 2)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Team Management Section */}
-            {showTeamManagementSection && isAdmin && (
-              <div style={{ marginBottom: "2rem" }}>
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "1rem"
-                }}>
-                  <h3 style={{ margin: 0, color: "#333", fontSize: "1.2rem" }}>👥 Team Management</h3>
-                  <button
-                    onClick={() => setShowTeamManagementSection(false)}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "1.2rem",
-                      cursor: "pointer",
-                      color: "#666"
-                    }}
-                    title="Close"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <p style={{ color: "#666", marginBottom: "1.5rem" }}>
-                  Invite and manage respondents who can help handle your WhatsApp conversations.
-                </p>
-
-                {/* Invite New Respondent */}
-                <div style={{ marginBottom: '2rem' }}>
-                  <h4 style={{ color: '#333', marginBottom: '1rem' }}>Invite New Respondent</h4>
-                  <form onSubmit={handleInviteRespondent} style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    marginBottom: '1rem',
-                    flexDirection: 'row'
-                  }}>
-                    <input
-                      type="email"
-                      placeholder="respondent@gmail.com"
-                      value={newRespondentEmail}
-                      onChange={(e) => setNewRespondentEmail(e.target.value)}
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        fontSize: '16px',
-                        minWidth: 0,
-                        boxSizing: 'border-box'
-                      }}
-                      required
-                    />
-                    <button
-                      type="submit"
-                      disabled={invitingRespondent || !newRespondentEmail.trim()}
-                      style={{
-                        padding: '0.75rem 1.5rem',
-                        backgroundColor: '#4caf50',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: invitingRespondent || !newRespondentEmail.trim() ? 'not-allowed' : 'pointer',
-                        opacity: invitingRespondent || !newRespondentEmail.trim() ? 0.7 : 1,
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        minWidth: '120px'
-                      }}
-                    >
-                      {invitingRespondent ? 'Inviting...' : 'Invite'}
-                    </button>
-                  </form>
-                  <small style={{ color: '#666' }}>
-                    Respondents must use Gmail addresses only. They'll receive an invitation link to join your team.
-                  </small>
-
-                  {/* Show last invitation */}
-                  {lastInvitation && (
-                    <div style={{
-                      marginTop: '1rem',
-                      padding: '1rem',
-                      backgroundColor: '#e8f5e8',
-                      border: '1px solid #4caf50',
-                      borderRadius: '4px'
-                    }}>
-                      <h4 style={{ marginTop: 0, color: '#4caf50' }}>✅ Invitation Created!</h4>
-                      <p style={{ margin: '0.5rem 0', color: '#666' }}>
-                        <strong>Email:</strong> {lastInvitation.email}
-                      </p>
-                      <p style={{ margin: '0.5rem 0', color: '#666' }}>
-                        <strong>Invitation Link:</strong>
-                      </p>
-                      <div style={{
-                        backgroundColor: '#f5f5f5',
-                        padding: '0.5rem',
-                        borderRadius: '4px',
-                        fontFamily: 'monospace',
-                        fontSize: '12px',
-                        wordBreak: 'break-all',
-                        marginBottom: '0.5rem'
-                      }}>
-                        {lastInvitation.invitationUrl}
-                      </div>
-                      <p style={{ fontSize: '14px', color: '#666', marginBottom: '0.5rem' }}>
-                        Share this link with the respondent. The link has been copied to your clipboard.
-                      </p>
-                      <button
-                        onClick={() => setLastInvitation(null)}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#666',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Current Respondents */}
-                <div>
-                  <h4 style={{ color: '#333', marginBottom: '1rem' }}>Current Team Members</h4>
-                  {respondents.length === 0 ? (
-                    <p style={{ color: '#666', fontStyle: 'italic' }}>
-                      No respondents invited yet. Conversations will be handled by you (admin) until you add team members.
-                    </p>
-                  ) : (
-                    <div style={{ display: 'grid', gap: '0.75rem' }}>
-                      {respondents.map((respondent) => (
-                        <div key={respondent.id} style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          padding: '1rem',
-                          border: '1px solid #e0e0e0',
-                          borderRadius: '4px',
-                          backgroundColor: '#fafafa'
-                        }}>
-                          <div>
-                            <div style={{ fontWeight: 'bold', color: '#333' }}>
-                              {respondent.email}
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#666' }}>
-                              Status: <span style={{
-                                color: respondent.status === 'active' ? '#4caf50' :
-                                       respondent.status === 'invited' ? '#ff9800' : '#f44336'
-                              }}>
-                                {respondent.status === 'active' ? 'Active' :
-                                 respondent.status === 'invited' ? 'Invited (pending acceptance)' : respondent.status}
-                              </span>
-                              {respondent.status === 'active' && (
-                                <span style={{
-                                  marginLeft: '0.5rem',
-                                  color: respondent.isOnline ? '#4caf50' : '#ff9800',
-                                  fontSize: '0.8rem'
-                                }}>
-                                  {respondent.isOnline ? '🟢 Online' : '🟡 Offline'}
-                                </span>
-                              )}
-                            </div>
-                            {respondent.invitedAt && (
-                              <div style={{ fontSize: '12px', color: '#999' }}>
-                                Invited: {respondent.invitedAt.toDate ? respondent.invitedAt.toDate().toLocaleDateString() : new Date(respondent.invitedAt).toLocaleDateString()}
-                              </div>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleRemoveRespondent(respondent.id)}
-                            disabled={removingRespondent === respondent.id}
-                            style={{
-                              padding: '0.5rem 1rem',
-                              backgroundColor: '#f44336',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: removingRespondent === respondent.id ? 'not-allowed' : 'pointer',
-                              opacity: removingRespondent === respondent.id ? 0.7 : 1,
-                              fontSize: '14px'
-                            }}
-                          >
-                            {removingRespondent === respondent.id ? 'Removing...' : 'Remove'}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         <div
           style={{
