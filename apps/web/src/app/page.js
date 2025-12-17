@@ -12,8 +12,11 @@ export default function HomePage() {
     if (!loading) {
       if (user && !authError) {
         router.push('/dashboard');
+      } else if (!user && !authError) {
+        // Redirect to login if no user is authenticated
+        router.push('/login');
       }
-      // If there's an authError or no user, show the landing page
+      // Only show error page if there's an actual auth error
     }
   }, [user, loading, authError, router]);
 
@@ -112,5 +115,16 @@ export default function HomePage() {
     );
   }
 
-  return null; // This shouldn't render, but just in case
+  // This should never render - users are always redirected
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      fontSize: '18px'
+    }}>
+      Redirecting...
+    </div>
+  );
 }

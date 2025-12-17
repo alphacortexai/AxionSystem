@@ -1507,19 +1507,64 @@ export default function UserInboxPage() {
               })}
             </div>
           ) : (
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "60vh",
-              color: "#666",
-              textAlign: "center"
-            }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>💬</div>
-              <h3 style={{ margin: "0 0 0.5rem 0", color: "#333" }}>Select a conversation</h3>
-              <p>Choose a ticket from the sidebar to start chatting with customers.</p>
-            </div>
+            tickets.length === 0 ? (
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "60vh",
+                color: "#666",
+                textAlign: "center",
+                padding: "2rem"
+              }}>
+                <div style={{ fontSize: "3rem", marginBottom: "1.5rem" }}>📭</div>
+                <h3 style={{ margin: "0 0 1rem 0", color: "#333" }}>No Active Conversations</h3>
+                <p style={{ margin: "0 0 1.5rem 0", fontSize: "1rem", lineHeight: "1.5" }}>
+                  You currently have no tickets assigned to you. New conversations will appear here when assigned by your administrators.
+                </p>
+                <div style={{
+                  backgroundColor: "#f8f9fa",
+                  padding: "1.5rem",
+                  borderRadius: "8px",
+                  border: "1px solid #e9ecef",
+                  maxWidth: "400px"
+                }}>
+                  <h4 style={{
+                    margin: "0 0 0.5rem 0",
+                    color: "#495057",
+                    fontSize: "1rem"
+                  }}>
+                    💡 What happens next?
+                  </h4>
+                  <ul style={{
+                    margin: 0,
+                    paddingLeft: "1.5rem",
+                    textAlign: "left",
+                    color: "#6c757d",
+                    fontSize: "0.9rem"
+                  }}>
+                    <li>Administrators assign conversations to team members</li>
+                    <li>You'll receive notifications for new assignments</li>
+                    <li>Check back regularly or your admin will notify you</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "60vh",
+                color: "#666",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>💬</div>
+                <h3 style={{ margin: "0 0 0.5rem 0", color: "#333" }}>Select a conversation</h3>
+                <p>Choose a ticket from the sidebar to start chatting with customers.</p>
+              </div>
+            )
           )}
         </div>
 
