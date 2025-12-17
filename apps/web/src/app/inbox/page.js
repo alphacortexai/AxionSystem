@@ -368,6 +368,25 @@ export default function InboxPage() {
   const renderMessageContent = (msg) => {
     console.log('📝 renderMessageContent called for message:', msg.id, 'hasMedia:', msg.hasMedia, 'media:', msg.media);
 
+    // Special case: voice note that has been stored but is still converting on the backend.
+    // These messages have a voiceNotePath, hasMedia true, but media is null/empty
+    // until the Cloud Function + retry job attach the final OGG URL.
+    if (msg.voiceNotePath && (!msg.media || (Array.isArray(msg.media) && msg.media.length === 0))) {
+      return (
+        <div key="voice-note-pending" style={{
+          color: "#555",
+          fontSize: "0.85rem",
+          fontStyle: "italic",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.35rem"
+        }}>
+          <span>🎵</span>
+          <span>Voice note is processing… please wait a moment.</span>
+        </div>
+      );
+    }
+
     // If message has both media and text, combine them inline
     if (msg.hasMedia && msg.media && msg.body) {
       const combinedContent = [];

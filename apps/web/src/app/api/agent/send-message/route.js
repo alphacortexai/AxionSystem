@@ -272,7 +272,12 @@ export async function POST(request) {
       console.log(`📎 Agent sending media: ${mediaUrl} (${mediaType})`);
     } else if (voiceNotePath) {
       // Store voiceNotePath even if OGG isn't ready yet (for potential retry)
+      // NOTE: we deliberately set media to null so Firestore has the field,
+      // which allows the retryVoiceNoteDelivery function (Cloud Function)
+      // to query using `.where('media', '==', null)` and later populate it
+      // with the signed OGG URL once conversion is complete.
       messageData.voiceNotePath = voiceNotePath;
+      messageData.media = null;
       messageData.hasMedia = true;
       messageData.mediaType = 'audio/ogg'; // Expected type after conversion
       console.log(`📎 Voice note path stored (OGG conversion pending): ${voiceNotePath}`);
