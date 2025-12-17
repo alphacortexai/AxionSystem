@@ -11,31 +11,28 @@ export default function LoginPage() {
   useEffect(() => {
     // Wait for both auth loading and context loading to complete
     if (!loading && !contextLoading && user) {
-      // Route based on user role
-      if (userRole === 'respondent') {
-        // Respondents go to user dashboard
-        router.push('/user-dashboard');
-      } else if (userRole === 'admin') {
-        // Check if admin user has multiple companies/roles
-        const allCompanies = [...userCompanies, ...respondentCompanies];
+      // Route based on available companies and roles
+      const allCompanies = [...userCompanies, ...respondentCompanies];
 
-        if (allCompanies.length > 1 && !selectedCompanyId) {
-          // Multiple companies - let user choose
+      if (allCompanies.length === 0) {
+        // No companies at all - new user needs onboarding to create company
+        router.push('/onboarding');
+      } else if (userCompanies.length > 0 && respondentCompanies.length === 0) {
+        // Only admin companies - go to admin dashboard
+        if (userCompanies.length > 1 && !selectedCompanyId) {
           router.push('/select-company');
-        } else if (allCompanies.length === 1 && !selectedCompanyId) {
-          // Single company - auto-select it
-          // The auth context useEffect will handle this
-          router.push('/dashboard');
-        } else if (allCompanies.length === 0) {
-          // No companies - needs onboarding
-          router.push('/onboarding');
         } else {
-          // Has selected company
           router.push('/dashboard');
         }
+      } else if (respondentCompanies.length > 0) {
+        // Has respondent companies - go to user dashboard
+        router.push('/user-dashboard');
+      } else {
+        // Mixed roles - let them choose
+        router.push('/select-company');
       }
     }
-  }, [user, userCompanies, respondentCompanies, selectedCompanyId, loading, contextLoading, userRole, router]);
+  }, [user, userCompanies, respondentCompanies, selectedCompanyId, loading, contextLoading, router]);
 
   const handleGoogleSignIn = async () => {
     try {

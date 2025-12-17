@@ -77,14 +77,14 @@ export default function SignupPage() {
           fontSize: '1.5rem',
           fontWeight: '600'
         }}>
-          Get Started
+          Create Admin Account
         </h2>
         <p style={{
           color: '#666',
           marginBottom: '2rem',
           fontSize: '1.1rem'
         }}>
-          Create your account and start building AI-powered WhatsApp assistants for your business.
+          Sign up to create and manage your company's AI-powered WhatsApp assistants. For team invitations, please use the link provided by your administrator.
         </p>
 
         <button

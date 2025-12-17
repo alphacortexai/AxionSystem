@@ -347,6 +347,10 @@ export function AuthProvider({ children }) {
 
   const acceptInvitation = async (companyId, token) => {
     try {
+      if (!user?.email) {
+        throw new Error('You must be logged in to accept an invitation');
+      }
+
       // Find the respondent by token
       const respondentsRef = collection(db, 'companies', companyId, 'respondents');
       const q = query(respondentsRef, where('invitationToken', '==', token));
@@ -359,13 +363,23 @@ export function AuthProvider({ children }) {
       const respondentDoc = snapshot.docs[0];
       const respondentData = respondentDoc.data();
 
+      // Validate that the logged-in user matches the invited email
+      if (respondentData.email !== user.email) {
+        throw new Error(`This invitation is for ${respondentData.email}. Please sign in with the correct account.`);
+      }
+
+      // Check if invitation is still valid
+      if (respondentData.status !== 'invited') {
+        throw new Error('This invitation has already been accepted or is no longer valid.');
+      }
+
       // Update respondent status and link to current user
       await updateDoc(respondentDoc.ref, {
         status: 'active',
         acceptedAt: new Date(),
-        userId: user?.uid, // Link to the accepting user
-        name: user?.displayName || '',
-        displayName: user?.displayName || '',
+        userId: user.uid, // Link to the accepting user
+        name: user.displayName || '',
+        displayName: user.displayName || '',
         isOnline: true, // Set as online when they accept invitation
         lastSeen: new Date(),
       });

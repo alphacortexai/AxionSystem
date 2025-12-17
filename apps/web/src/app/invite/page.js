@@ -49,8 +49,8 @@ function InvitePageContent() {
 
       await acceptInvitation(companyId, token);
 
-      // Redirect to inbox after successful acceptance
-      router.push('/inbox');
+      // Redirect to user dashboard after successful acceptance
+      router.push('/user-dashboard');
     } catch (err) {
       console.error('Error accepting invitation:', err);
       setError(err.message || 'Failed to accept invitation');
