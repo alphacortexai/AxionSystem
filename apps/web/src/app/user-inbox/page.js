@@ -17,7 +17,7 @@ import {
 import { getStorage, ref, getDownloadURL, uploadBytes } from "firebase/storage";
 
 export default function UserInboxPage() {
-  const { user, company, selectedCompanyId, loading, userRole, updateRespondentStatus } = useAuth();
+  const { user, company, selectedCompanyId, loading, userRole, updateRespondentStatus, logout } = useAuth();
   const router = useRouter();
 
   // Core inbox state
@@ -568,6 +568,15 @@ export default function UserInboxPage() {
   // Use API routes for all deployments
   const apiBase = "/api";
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   async function handleSendAgentMessage(e) {
     e?.preventDefault();
     if (!selectedTicket || (!agentMessage.trim() && !selectedMedia)) return;
@@ -901,14 +910,54 @@ export default function UserInboxPage() {
           ))}
           {tickets.length === 0 && (
             <div style={{
-              padding: "2rem 1rem",
+              padding: "3rem 2rem",
               textAlign: "center",
-              color: "#666"
+              color: "#666",
+              maxWidth: "500px",
+              margin: "0 auto"
             }}>
-              <div style={{ fontSize: "2rem", marginBottom: "1rem" }}>📭</div>
-              <div>No tickets assigned to you yet.</div>
-              <div style={{ fontSize: "0.9rem", marginTop: "0.5rem" }}>
-                New conversations will appear here when assigned by administrators.
+              <div style={{ fontSize: "3rem", marginBottom: "1.5rem" }}>📭</div>
+              <h3 style={{
+                margin: "0 0 1rem 0",
+                color: "#333",
+                fontSize: "1.3rem",
+                fontWeight: "600"
+              }}>
+                No Active Conversations
+              </h3>
+              <p style={{
+                margin: "0 0 1.5rem 0",
+                fontSize: "1rem",
+                lineHeight: "1.5"
+              }}>
+                You currently have no tickets assigned to you. New conversations will appear here when assigned by your administrators.
+              </p>
+
+              <div style={{
+                backgroundColor: "#f8f9fa",
+                padding: "1.5rem",
+                borderRadius: "8px",
+                border: "1px solid #e9ecef"
+              }}>
+                <h4 style={{
+                  margin: "0 0 0.5rem 0",
+                  color: "#495057",
+                  fontSize: "1rem"
+                }}>
+                  💡 What happens next?
+                </h4>
+                <ul style={{
+                  margin: 0,
+                  paddingLeft: "1.5rem",
+                  textAlign: "left",
+                  color: "#6c757d",
+                  fontSize: "0.9rem"
+                }}>
+                  <li>Administrators assign conversations to team members</li>
+                  <li>You'll receive notifications for new assignments</li>
+                  <li>Check back regularly or your admin will notify you</li>
+                  <li>You can also check your dashboard for company updates</li>
+                </ul>
               </div>
             </div>
           )}
@@ -1050,6 +1099,95 @@ export default function UserInboxPage() {
                   {showHistorySection ? "👁️ Hide History" : "📚 Show History"}
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Admin Header for Empty State */}
+        {!isMobile && tickets.length === 0 && isAdmin && (
+          <div style={{
+            backgroundColor: "#ffffff",
+            borderBottom: "1px solid #e5e5ea",
+            padding: "1rem 2rem",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.75rem",
+              flexWrap: "wrap",
+              maxWidth: "100%"
+            }}>
+              <h1 style={{ color: '#1976d2', margin: 0, fontSize: '1.5rem' }}>Axion</h1>
+              <span style={{ color: '#666' }}>|</span>
+              <span style={{ color: '#666', fontSize: '0.9rem' }}>My Inbox</span>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flexWrap: 'wrap',
+              maxWidth: '100%'
+            }}>
+              <span style={{ color: '#666', fontSize: '14px', wordBreak: 'break-all' }}>{user.email}</span>
+              {company && (
+                <span style={{
+                  backgroundColor: '#4caf50',
+                  color: 'white',
+                  padding: '0.125rem 0.5rem',
+                  borderRadius: '10px',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }}>
+                  {company.name} • ADMIN
+                </span>
+              )}
+              <button
+                onClick={() => router.push('/user-dashboard')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#007aff',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ← Dashboard
+              </button>
+              <button
+                onClick={() => router.push('/settings')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f5f5f5',
+                  color: '#333',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                ⚙️ Settings
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#f44336',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px'
+                }}
+              >
+                Logout
+              </button>
             </div>
           </div>
         )}
