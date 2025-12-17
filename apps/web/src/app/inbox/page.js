@@ -1594,7 +1594,7 @@ export default function InboxPage() {
       >
         {/* Mobile Header */}
         {isMobile && (
-              <div style={{
+          <div style={{
             backgroundColor: "#ffffff",
             borderBottom: "1px solid #e5e5ea",
             padding: "0.75rem 1rem",
@@ -1625,32 +1625,55 @@ export default function InboxPage() {
               flex: 1
             }}>
               {selectedTicket ? `Chat with ${selectedTicket.customerId?.split('@')[0] || 'Customer'}` : 'Inbox'}
-                  </div>
+            </div>
             {selectedTicket && (
-              <button
-                onClick={() => setShowHistorySection(!showHistorySection)}
-                style={{
-                  backgroundColor: "transparent",
-                  border: "1px solid #e5e5ea",
-                  padding: "0.4rem 0.6rem",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: showHistorySection ? "#007aff" : "#8e8e93",
-                  fontSize: "0.9rem",
-                  gap: "0.3rem",
-                  whiteSpace: "nowrap"
-                }}
-                title={showHistorySection ? "Hide history" : "Show history"}
-              >
-                <span style={{ fontSize: "1rem" }}>📚</span>
-                <span>{showHistorySection ? "Hide" : "History"}</span>
-              </button>
+              <>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid #e5e5ea",
+                    padding: "0.4rem 0.6rem",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#007aff",
+                    fontSize: "0.9rem",
+                    gap: "0.3rem",
+                    whiteSpace: "nowrap"
+                  }}
+                  title="Back to dashboard"
+                >
+                  <span style={{ fontSize: "1rem" }}>←</span>
+                  <span>Dashboard</span>
+                </button>
+                <button
+                  onClick={() => setShowHistorySection(!showHistorySection)}
+                  style={{
+                    backgroundColor: "transparent",
+                    border: "1px solid #e5e5ea",
+                    padding: "0.4rem 0.6rem",
+                    borderRadius: "8px",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: showHistorySection ? "#007aff" : "#8e8e93",
+                    fontSize: "0.9rem",
+                    gap: "0.3rem",
+                    whiteSpace: "nowrap"
+                  }}
+                  title={showHistorySection ? "Hide history" : "Show history"}
+                >
+                  <span style={{ fontSize: "1rem" }}>📚</span>
+                  <span>{showHistorySection ? "Hide" : "History"}</span>
+                </button>
+              </>
             )}
-              </div>
-            )}
+          </div>
+        )}
 
         {/* Desktop Header */}
         {!isMobile && selectedTicket && (
@@ -1676,16 +1699,16 @@ export default function InboxPage() {
             }}>
               Chat with {selectedTicket.customerId?.split('@')[0] || 'Customer'}
             </div>
-            {customerHistory.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <button
-                onClick={() => setShowHistorySection(!showHistorySection)}
+                onClick={() => router.push('/dashboard')}
                 style={{
                   fontSize: "0.85rem",
                   padding: "0.5rem 0.9rem",
                   borderRadius: "6px",
                   border: "1px solid #ddd",
-                  backgroundColor: showHistorySection ? "#f44336" : "#4caf50",
-                  color: "white",
+                  backgroundColor: "#ffffff",
+                  color: "#007aff",
                   cursor: "pointer",
                   fontWeight: "600",
                   display: "flex",
@@ -1693,11 +1716,33 @@ export default function InboxPage() {
                   gap: "0.35rem",
                   whiteSpace: "nowrap"
                 }}
-                title={showHistorySection ? "Hide previous conversations" : "Show previous conversations"}
+                title="Back to dashboard"
               >
-                {showHistorySection ? "👁️ Hide History" : "📚 Show History"}
+                ← Dashboard
               </button>
-            )}
+              {customerHistory.length > 0 && (
+                <button
+                  onClick={() => setShowHistorySection(!showHistorySection)}
+                  style={{
+                    fontSize: "0.85rem",
+                    padding: "0.5rem 0.9rem",
+                    borderRadius: "6px",
+                    border: "1px solid #ddd",
+                    backgroundColor: showHistorySection ? "#f44336" : "#4caf50",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    whiteSpace: "nowrap"
+                  }}
+                  title={showHistorySection ? "Hide previous conversations" : "Show previous conversations"}
+                >
+                  {showHistorySection ? "👁️ Hide History" : "📚 Show History"}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -1779,7 +1824,7 @@ export default function InboxPage() {
                               }}
                             >
                               <div style={{
-                                maxWidth: isMobile ? "80%" : "65%",
+                                maxWidth: "75%",
                                 backgroundColor: isAgentMessage
                                   ? "#dcf8c6" // WhatsApp outgoing
                                   : isSystemMessage
@@ -1968,7 +2013,7 @@ export default function InboxPage() {
                                 }}
                               >
                                 <div style={{
-                                  maxWidth: isMobile ? "80%" : "65%",
+                                  maxWidth: "75%",
                                   backgroundColor: isAgentMessage
                                     ? "#dcf8c6"
                                     : isSystemMessage
@@ -2094,7 +2139,7 @@ export default function InboxPage() {
                   }}>
                     {/* Message Bubble */}
                     <div style={{
-                      maxWidth: isMobile ? "280px" : "400px",
+                      maxWidth: "75%",
                       backgroundColor: isAgentMessage
                         ? "#dcf8c6" // WhatsApp outgoing
                         : isSystemMessage
