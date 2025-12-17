@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth-context';
+import AuthGuard from '../../components/AuthGuard';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
@@ -14,12 +15,6 @@ export default function OnboardingPage() {
   const [companyName, setCompanyName] = useState('');
   const [useCase, setUseCase] = useState('');
   const [creating, setCreating] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/login');
-    }
-  }, [user, router]);
 
   const handleCreateCompany = async () => {
     const trimmedName = companyName.trim();
@@ -84,11 +79,8 @@ Continue the conversation with your next message.`,
     }
   };
 
-  if (!user) {
-    return null; // useEffect will handle navigation
-  }
-
   return (
+    <AuthGuard>
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#f5f5f5',
@@ -254,5 +246,6 @@ Continue the conversation with your next message.`,
         )}
       </div>
     </div>
+    </AuthGuard>
   );
 }

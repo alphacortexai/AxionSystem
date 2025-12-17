@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth-context';
+import AuthGuard from '../../components/AuthGuard';
 
 export default function SelectCompanyPage() {
   const {
@@ -60,11 +61,6 @@ export default function SelectCompanyPage() {
     );
   }
 
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
-
   const allCompanies = [...userCompanies, ...respondentCompanies];
 
   // If only one company, this page shouldn't render (useEffect handles redirect)
@@ -73,6 +69,7 @@ export default function SelectCompanyPage() {
   }
 
   return (
+    <AuthGuard>
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#f5f5f5',
@@ -207,5 +204,6 @@ export default function SelectCompanyPage() {
         </div>
       </div>
     </div>
+    </AuthGuard>
   );
 }
