@@ -17,7 +17,7 @@ import {
 import { getStorage, ref, getDownloadURL, uploadBytes } from "firebase/storage";
 
 export default function UserInboxPage() {
-  const { user, company, loading, userRole, updateRespondentStatus } = useAuth();
+  const { user, company, selectedCompanyId, loading, userRole, updateRespondentStatus } = useAuth();
   const router = useRouter();
 
   // Core inbox state
