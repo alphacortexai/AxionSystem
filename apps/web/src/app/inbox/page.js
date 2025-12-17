@@ -903,7 +903,7 @@ export default function InboxPage() {
 
   async function handleSendAgentMessage(e) {
     e?.preventDefault();
-    if (!selectedTicket || (!agentMessage.trim() && !selectedMedia && !recordedAudio)) return;
+    if (!selectedTicket || (!agentMessage.trim() && !selectedMedia)) return;
 
     // Validate ticket still exists and user has access
     try {
@@ -989,8 +989,8 @@ export default function InboxPage() {
             requestData.mediaType = selectedMedia.type;
             console.log("📎 Image converted to data URL for sending");
           }
-          // For audio/video files (no longer recording voice notes, just send as normal media)
-          else if ((selectedMedia.type.startsWith('audio/') || selectedMedia.type.startsWith('video/')) && selectedMedia.size <= 5 * 1024 * 1024) {
+      // For video files, send as normal media
+      else if (selectedMedia.type.startsWith('video/') && selectedMedia.size <= 5 * 1024 * 1024) {
             const mediaUrl = await new Promise((resolve) => {
               const reader = new FileReader();
               reader.onload = (e) => resolve(e.target.result);
@@ -1003,18 +1003,18 @@ export default function InboxPage() {
           else {
             // For larger files or unsupported types, show appropriate message
             const isImage = selectedMedia.type.startsWith('image/');
-            const isMedia = selectedMedia.type.startsWith('audio/') || selectedMedia.type.startsWith('video/');
+            const isMedia = selectedMedia.type.startsWith('video/');
 
             if (isImage) {
               alert(`Image "${selectedMedia.name}" is too large. Please use images under 1MB.`);
             } else if (isMedia) {
-              alert(`Media file "${selectedMedia.name}" is too large. Please use media files under 5MB.`);
+              alert(`Video file "${selectedMedia.name}" is too large. Please use video files under 5MB.`);
             } else {
-              alert(`File "${selectedMedia.name}" is not supported yet. Please use images, audio, or video files.`);
+              alert(`File "${selectedMedia.name}" is not supported yet. Please use images, video, documents, or contact files.`);
             }
             setSelectedMedia(null);
             setMediaPreview(null);
-            setRecordedAudio(null);
+            // Ensure any stale media state is cleared
             return;
           }
         } catch (error) {
@@ -1075,9 +1075,7 @@ export default function InboxPage() {
         // Clear media after successful send
         setSelectedMedia(null);
         setMediaPreview(null);
-        setRecordedAudio(null);
-        setIsRecording(false);
-        setMediaRecorder(null);
+        // Clear any stale recording state (if any)
       }
     } catch (err) {
       console.error("Error sending agent message:", err);
@@ -2385,7 +2383,7 @@ export default function InboxPage() {
                 📎
                 <input
                   type="file"
-                  accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.vcf"
+                  accept="image/*,video/*,.pdf,.doc,.docx,.txt,.vcf"
                   onChange={(e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -2400,21 +2398,26 @@ export default function InboxPage() {
 
                       if (isImage) {
                         maxSize = 1024 * 1024; // 1MB for images (data URL limit)
-                      } else if (isAudio || isVideo) {
-                        maxSize = 5 * 1024 * 1024; // 5MB for media
+                      } else if (isVideo) {
+                        maxSize = 5 * 1024 * 1024; // 5MB for video
                       } else if (isDocument) {
                         maxSize = 10 * 1024 * 1024; // 10MB for documents
                       }
 
-                      if (file.size > maxSize) {
-                        const sizeMB = (maxSize / (1024 * 1024)).toFixed(1);
-                        alert(`File size must be less than ${sizeMB}MB for ${isImage ? 'images' : isAudio || isVideo ? 'media files' : 'documents'}`);
+                      if (isAudio) {
+                        alert("Audio files cannot be sent from the app. You can still receive and play audio messages.");
                         return;
                       }
 
-                      // Only allow supported types for now
-                      if (!isImage && !isAudio && !isVideo && !isDocument && !isContact) {
-                        alert("Unsupported file type. Please use images, audio, video, documents, or contact files.");
+                      if (file.size > maxSize) {
+                        const sizeMB = (maxSize / (1024 * 1024)).toFixed(1);
+                        alert(`File size must be less than ${sizeMB}MB for ${isImage ? 'images' : isVideo ? 'video files' : 'documents'}`);
+                        return;
+                      }
+
+                      // Only allow supported types for now (audio explicitly excluded)
+                      if (!isImage && !isVideo && !isDocument && !isContact) {
+                        alert("Unsupported file type. Please use images, video, documents, or contact files.");
                         return;
                       }
 
@@ -2464,21 +2467,21 @@ export default function InboxPage() {
               {/* Send button */}
             <button
               type="submit"
-                disabled={isSending || (!agentMessage.trim() && !selectedMedia && !recordedAudio) || isRecording}
+                disabled={isSending || (!agentMessage.trim() && !selectedMedia)}
               style={{
                   width: isMobile ? "32px" : "36px",
                   height: isMobile ? "32px" : "36px",
                   borderRadius: "50%",
                 border: "none",
-                  backgroundColor: (!agentMessage.trim() && !selectedMedia && !recordedAudio) || isRecording ? "#8e8e93" : "#007aff",
+                  backgroundColor: (!agentMessage.trim() && !selectedMedia) ? "#8e8e93" : "#007aff",
                 color: "white",
-                  cursor: (!agentMessage.trim() && !selectedMedia && !recordedAudio) || isRecording ? "not-allowed" : "pointer",
+                  cursor: (!agentMessage.trim() && !selectedMedia) ? "not-allowed" : "pointer",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: isMobile ? "0.9rem" : "1rem",
                   transition: "all 0.2s ease",
-                  boxShadow: (!agentMessage.trim() && !selectedMedia && !recordedAudio) || isRecording ? "none" : "0 1px 3px rgba(0,0,0,0.1)",
+                  boxShadow: (!agentMessage.trim() && !selectedMedia) ? "none" : "0 1px 3px rgba(0,0,0,0.1)",
                   opacity: isSending ? 0.7 : 1,
                   flexShrink: 0
                 }}

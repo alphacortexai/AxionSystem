@@ -64,7 +64,6 @@ export async function POST(request) {
       userEmail,
       mediaUrl: incomingMediaUrl,
       mediaType: incomingMediaType,
-      voiceNotePath,
     } = parsed;
 
     let mediaUrl = incomingMediaUrl;
@@ -74,60 +73,9 @@ export async function POST(request) {
       return NextResponse.json({ error: "convId and tenantId are required" }, { status: 400 });
     }
 
-    // If we received a Storage path for a voice note, resolve it to a signed URL for the converted OGG
-    if (!mediaUrl && voiceNotePath) {
-      try {
-        const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'axion256system.firebasestorage.app';
-        const bucket = getStorage().bucket(bucketName);
-
-        // Where the Cloud Function writes the converted OGG
-        const oggPath = voiceNotePath
-          .replace('/voice-notes/', '/voice-notes/converted/')
-          .replace(/\.[^.]+$/, '.ogg');
-
-        const oggFile = bucket.file(oggPath);
-
-        const maxAttempts = 10; // Increased to 10 attempts (10 seconds total wait)
-        const delayMs = 1000;
-        let exists = false;
-
-        console.log(`🎵 Resolving voice note OGG from path: ${voiceNotePath} -> ${oggPath}`);
-
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-          const [fileExists] = await oggFile.exists();
-          if (fileExists) {
-            exists = true;
-            console.log(`✅ Voice note OGG found on attempt ${attempt}`);
-            break;
-          }
-          console.log(`⏳ Voice note OGG not ready yet (attempt ${attempt}/${maxAttempts}) for`, oggPath);
-          if (attempt < maxAttempts) {
-            await new Promise((r) => setTimeout(r, delayMs));
-          }
-        }
-
-        if (exists) {
-          const [signedUrl] = await oggFile.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 60 * 60 * 1000, // 1 hour
-          });
-          mediaUrl = signedUrl;
-          // Force media type to audio/ogg for Twilio + UI
-          mediaType = 'audio/ogg';
-          console.log('🎵 Successfully resolved voice note OGG URL from Storage:', oggPath);
-        } else {
-          console.warn('⚠️ Voice note OGG not found after retries. Cloud Function may still be processing. Path:', oggPath);
-          console.warn('⚠️ Message will be stored but not sent to Twilio until OGG is ready. Consider implementing retry mechanism.');
-          // Don't set mediaUrl - message will be stored but not sent to Twilio
-        }
-      } catch (err) {
-        console.error('❌ Error resolving voiceNotePath to OGG URL:', err);
-      }
-    }
-
-    // Allow request if we have body text, mediaUrl, OR voiceNotePath (even if OGG conversion isn't done yet)
-    if (!body && !mediaUrl && !voiceNotePath) {
-      return NextResponse.json({ error: "Either body text, mediaUrl, or voiceNotePath is required" }, { status: 400 });
+    // Require either text or a media URL (audio sending is disabled at the UI level)
+    if (!body && !mediaUrl) {
+      return NextResponse.json({ error: "Either body text or mediaUrl is required" }, { status: 400 });
     }
 
     // Load company configuration
@@ -270,17 +218,6 @@ export async function POST(request) {
       }];
       messageData.hasMedia = true;
       console.log(`📎 Agent sending media: ${mediaUrl} (${mediaType})`);
-    } else if (voiceNotePath) {
-      // Store voiceNotePath even if OGG isn't ready yet (for potential retry)
-      // NOTE: we deliberately set media to null so Firestore has the field,
-      // which allows the retryVoiceNoteDelivery function (Cloud Function)
-      // to query using `.where('media', '==', null)` and later populate it
-      // with the signed OGG URL once conversion is complete.
-      messageData.voiceNotePath = voiceNotePath;
-      messageData.media = null;
-      messageData.hasMedia = true;
-      messageData.mediaType = 'audio/ogg'; // Expected type after conversion
-      console.log(`📎 Voice note path stored (OGG conversion pending): ${voiceNotePath}`);
     }
 
     const agentMsgId = `agent-${Date.now()}`;
@@ -299,8 +236,6 @@ export async function POST(request) {
       updateData.lastMessage = body;
     } else if (mediaUrl) {
       updateData.lastMessage = mediaType ? `📎 ${mediaType.split('/')[0]} file` : '📎 Media file';
-    } else if (voiceNotePath) {
-      updateData.lastMessage = '📎 audio file';
     }
 
     await ticketRef.update(updateData);
@@ -320,11 +255,8 @@ export async function POST(request) {
       );
       console.warn(`Available config: SID=${!!company.twilioAccountSid}, Token=${!!company.twilioAuthToken}, Phone=${!!company.twilioPhoneNumber}`);
     } else if (!attributedBody && !mediaUrl) {
-      // Skip Twilio sending if we don't have body or mediaUrl (e.g., voice note OGG still processing)
-      console.warn(`⚠️ Skipping Twilio send - no body text and mediaUrl not ready yet. Voice note may still be converting.`);
-      if (voiceNotePath) {
-        console.warn(`⚠️ Voice note path: ${voiceNotePath} - Cloud Function may still be processing. Message stored in Firestore.`);
-      }
+      // Skip Twilio sending if we don't have body or mediaUrl
+      console.warn(`⚠️ Skipping Twilio send - no body text or mediaUrl provided.`);
     } else {
       try {
         const toWhatsApp = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
