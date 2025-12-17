@@ -5,25 +5,25 @@ import Link from 'next/link';
 import { useAuth } from '../../lib/auth-context';
 
 export default function DashboardPage() {
-  const { user, company, userCompanies, respondentCompanies, selectedCompanyId, userRole, loading, logout, selectCompanyContext } = useAuth();
+  const { user, company, userCompanies, respondentCompanies, selectedCompanyId, userRole, loading, contextLoading, logout, selectCompanyContext } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !contextLoading && !user) {
       router.push('/login');
       return;
     }
 
     // Redirect respondents to user dashboard
-    if (!loading && user && userRole === 'respondent') {
+    if (!loading && !contextLoading && user && userRole === 'respondent') {
       router.push('/user-dashboard');
       return;
     }
 
-    if (!loading && user && userRole === 'admin' && (!company || !selectedCompanyId)) {
+    if (!loading && !contextLoading && user && userRole === 'admin' && (!company || !selectedCompanyId)) {
       router.push('/select-company');
     }
-  }, [user, loading, userRole, company, selectedCompanyId, router]);
+  }, [user, loading, contextLoading, userRole, company, selectedCompanyId, router]);
 
   const handleLogout = async () => {
     try {
@@ -34,7 +34,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
+  if (loading || contextLoading) {
     return (
       <div style={{
         display: 'flex',
@@ -52,7 +52,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  if (!company || !selectedCompanyId) {
+  if (!contextLoading && (!company || !selectedCompanyId)) {
     return (
       <div style={{
         display: 'flex',

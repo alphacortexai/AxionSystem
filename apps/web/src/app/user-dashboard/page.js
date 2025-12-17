@@ -8,27 +8,27 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
 export default function UserDashboardPage() {
-  const { user, company, respondents, userCompanies, respondentCompanies, selectedCompanyId, userRole, loading, logout, selectCompanyContext } = useAuth();
+  const { user, company, respondents, userCompanies, respondentCompanies, selectedCompanyId, userRole, loading, contextLoading, logout, selectCompanyContext } = useAuth();
   const router = useRouter();
   const [companyStats, setCompanyStats] = useState({});
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !contextLoading && !user) {
       router.push('/login');
       return;
     }
 
     // Redirect admins to main dashboard
-    if (!loading && user && userRole === 'admin') {
+    if (!loading && !contextLoading && user && userRole === 'admin') {
       router.push('/dashboard');
       return;
     }
 
-    if (!loading && user && userRole === 'respondent' && (!company || !selectedCompanyId)) {
+    if (!loading && !contextLoading && user && userRole === 'respondent' && (!company || !selectedCompanyId)) {
       // Let respondents see their available companies
     }
-  }, [user, loading, userRole, company, selectedCompanyId, router]);
+  }, [user, loading, contextLoading, userRole, company, selectedCompanyId, router]);
 
   // Load stats for respondent companies
   useEffect(() => {
@@ -98,7 +98,7 @@ export default function UserDashboardPage() {
     }
   };
 
-  if (loading) {
+  if (loading || contextLoading) {
     return (
       <div style={{
         display: 'flex',

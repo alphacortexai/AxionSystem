@@ -12,6 +12,7 @@ export default function SelectCompanyPage() {
     respondentCompanies,
     selectedCompanyId,
     loading,
+    contextLoading,
     selectCompanyContext
   } = useAuth();
   const router = useRouter();
@@ -47,7 +48,7 @@ export default function SelectCompanyPage() {
     }
   };
 
-  if (loading) {
+  if (loading || contextLoading) {
     return (
       <div style={{
         display: 'flex',

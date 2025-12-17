@@ -17,7 +17,7 @@ import {
 import { getStorage, ref, getDownloadURL, uploadBytes } from "firebase/storage";
 
 export default function UserInboxPage() {
-  const { user, company, selectedCompanyId, loading, userRole, updateRespondentStatus, logout } = useAuth();
+  const { user, company, selectedCompanyId, loading, contextLoading, userRole, updateRespondentStatus, logout } = useAuth();
   const router = useRouter();
 
   // Core inbox state
@@ -390,22 +390,22 @@ export default function UserInboxPage() {
   };
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !contextLoading && !user) {
       router.push('/login');
       return;
     }
 
     // Redirect admins to main inbox
-    if (!loading && user && userRole === 'admin') {
+    if (!loading && !contextLoading && user && userRole === 'admin') {
       router.push('/inbox');
       return;
     }
 
     // If user is logged in but no company context, redirect to user dashboard
-    if (!loading && user && userRole === 'respondent' && (!company || !selectedCompanyId)) {
+    if (!loading && !contextLoading && user && userRole === 'respondent' && (!company || !selectedCompanyId)) {
       router.push('/user-dashboard');
     }
-  }, [user, loading, company, selectedCompanyId, router, userRole]);
+  }, [user, loading, contextLoading, company, selectedCompanyId, router, userRole]);
 
   const tenantId = company?.id;
 
@@ -669,7 +669,7 @@ export default function UserInboxPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  if (loading || loadingTimeout) {
+  if (loading || contextLoading || loadingTimeout) {
     if (loadingTimeout) {
       return (
         <div style={{
