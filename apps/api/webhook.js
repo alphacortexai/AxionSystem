@@ -226,13 +226,20 @@ async function assignTicketToRespondent(ticketRef, tenantId, company) {
       console.log(`👨‍💼 No respondents available, assigned to Admin`);
     }
 
+    // Determine if there are *any* online or recently-online humans
+    const anyOnlineOrRecentlyOnline =
+      onlineRespondents.length > 0 ||
+      recentlyOnlineRespondents.length > 0 ||
+      companyData.adminOnline === true;
+
     // Update ticket with assignment
     await ticketRef.update({
       assignedTo,
       assignedEmail,
       assignedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      aiEnabled: assignedTo === 'Admin', // Enable AI when assigned to admin
+      // AI is ON only when there are no online/recently-online humans at all
+      aiEnabled: !anyOnlineOrRecentlyOnline,
     });
 
     console.log(`👤 Assigned conversation to: ${assignedTo}`);
@@ -249,7 +256,8 @@ async function assignTicketToRespondent(ticketRef, tenantId, company) {
       assignedTo: 'Admin',
       assignedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      aiEnabled: true, // Enable AI toggle for fallback admin assignment
+      // In fallback, keep AI OFF by default; offline logic will still allow AI when no humans are online
+      aiEnabled: false,
     });
     return { assignedTo: 'Admin', assignedEmail: null, assignedToOfflineRespondent: false };
   }
@@ -396,6 +404,8 @@ app.post("/webhook/whatsapp/:tenantId", async (req, res) => {
         customerId: from,
         status: "open",
         lastMessage: "",
+        // AI is OFF by default; assignment logic will decide if it should be auto-enabled
+        aiEnabled: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         channel: "whatsapp",
@@ -408,10 +418,9 @@ app.post("/webhook/whatsapp/:tenantId", async (req, res) => {
       const assignmentResult = await assignTicketToRespondent(ticketRef, tenantId, company);
 
       // Update ticket with assignment information
-      // AI is always enabled initially for toggle functionality, but real-time status determines responses
       const finalTicketData = {
         ...initialTicketData,
-        aiEnabled: true, // Always enable AI toggle, but check real-time status for responses
+        // `assignTicketToRespondent` already chose aiEnabled based on online humans
         assignedTo: assignmentResult.assignedTo,
         assignedEmail: assignmentResult.assignedEmail,
       };
@@ -437,7 +446,8 @@ app.post("/webhook/whatsapp/:tenantId", async (req, res) => {
       ticketDocData = snap.data() || {};
     }
 
-    const aiEnabled = ticketDocData.aiEnabled !== false; // treat missing as true
+    // Treat AI as enabled only when explicitly true (default OFF for new tickets)
+    const aiEnabled = ticketDocData.aiEnabled === true;
 
     // 2️⃣ Save incoming WhatsApp message in ticket's messages collection
     const msgRef = ticketRef.collection("messages").doc(id);

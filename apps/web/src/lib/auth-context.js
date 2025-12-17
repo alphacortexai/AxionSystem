@@ -526,6 +526,8 @@ export function AuthProvider({ children }) {
     try {
       console.log(`🔄 [${new Date().toISOString()}] Updating admin status: ${user.email} -> ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
 
+      const wasPreviouslyOffline = company?.adminOnline !== true && isOnline;
+
       // Update admin online status in company document
       const companyRef = doc(db, 'companies', company.id);
       await updateDoc(companyRef, {
@@ -536,9 +538,58 @@ export function AuthProvider({ children }) {
       // Update local company state
       setCompany(prev => prev ? { ...prev, adminOnline: isOnline, adminLastSeen: new Date() } : null);
 
+      // If admin just came online, immediately turn off AI for Admin-assigned tickets
+      if (wasPreviouslyOffline) {
+        await turnOffAIForAdminTickets();
+      }
+
       console.log(`✅ Admin status updated successfully for ${user.email}`);
     } catch (error) {
       console.error('❌ Error updating admin status:', error);
+    }
+  };
+
+  const turnOffAIForAdminTickets = async () => {
+    if (!company || userRole !== 'admin') return;
+
+    try {
+      console.log(`🤖 Turning off AI for tickets assigned to Admin in company ${company.id}`);
+
+      const ticketsRef = collection(db, 'companies', company.id, 'tickets');
+      const adminTicketsQuery = query(
+        ticketsRef,
+        where('assignedTo', '==', 'Admin'),
+        where('status', 'in', ['open', 'pending'])
+      );
+
+      const adminTicketsSnap = await getDocs(adminTicketsQuery);
+
+      for (const ticketDoc of adminTicketsSnap.docs) {
+        const ticketData = ticketDoc.data();
+
+        // Only update tickets where AI is currently enabled
+        if (ticketData.aiEnabled === true) {
+          await updateDoc(ticketDoc.ref, {
+            aiEnabled: false,
+            updatedAt: new Date(),
+          });
+
+          // Add a system message notifying about admin coming online and AI turning off
+          const systemMsgRef = ticketDoc.ref.collection('messages').doc(`system-admin-online-${Date.now()}`);
+          await systemMsgRef.set({
+            from: "System",
+            role: "system",
+            body: `👋 Admin ${user.displayName || user.email.split('@')[0]} has come online. AI assistant is now offline.`,
+            createdAt: new Date(),
+          });
+
+          console.log(`✅ Turned off AI for Admin-assigned ticket ${ticketDoc.id}`);
+        }
+      }
+
+      console.log(`🤖 AI turned off for ${adminTicketsSnap.size} Admin-assigned tickets`);
+    } catch (error) {
+      console.error('❌ Error turning off AI for Admin-assigned tickets:', error);
     }
   };
 

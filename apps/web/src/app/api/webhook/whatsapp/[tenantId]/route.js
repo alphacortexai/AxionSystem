@@ -312,7 +312,9 @@ export async function POST(request, { params }) {
       const initialTicketData = {
         customerId,
         status: "open",
-        aiEnabled: true, // Always enable AI toggle, but check real-time status for responses
+        // AI is OFF by default; we only enable it automatically
+        // when there are no online or recently-online humans.
+        aiEnabled: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         channel: "whatsapp",
@@ -375,10 +377,17 @@ export async function POST(request, { params }) {
         }
       }
 
+      // Decide if AI should be auto-enabled on creation:
+      // only when NO respondents are online/recently-online AND admin is offline.
+      const shouldEnableAIByDefault =
+        onlineRespondents.length === 0 &&
+        recentlyOnlineRespondents.length === 0 &&
+        company.adminOnline !== true;
+
       // Update ticket with assignment information
       const finalTicketData = {
         ...initialTicketData,
-        aiEnabled: true, // Always enable AI toggle, but check real-time status for responses
+        aiEnabled: shouldEnableAIByDefault,
         assignedTo,
         assignedEmail,
       };
@@ -404,7 +413,8 @@ export async function POST(request, { params }) {
       ticketDocData = snap.data() || {};
     }
 
-    const aiEnabled = ticketDocData.aiEnabled !== false; // treat missing as true
+    // Treat AI as enabled only when explicitly true (default OFF for new tickets)
+    const aiEnabled = ticketDocData.aiEnabled === true;
 
     // 2️⃣ Save incoming WhatsApp message in ticket's messages collection
     const messageData = {
