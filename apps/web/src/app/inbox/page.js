@@ -45,11 +45,8 @@ export default function InboxPage() {
   const [showHistorySection, setShowHistorySection] = useState(false); // Toggle for showing history section (hidden by default)
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedAudio, setRecordedAudio] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [recordingTimeout, setRecordingTimeout] = useState(null);
+
 
   // Mobile responsiveness (must be declared before any early returns)
   const [isMobile, setIsMobile] = useState(false);
@@ -130,138 +127,10 @@ export default function InboxPage() {
     }
   };
 
-  // Voice recording functions
-  const startRecording = async () => {
-    // Clear any existing media selection before starting recording
-    setSelectedMedia(null);
-    setMediaPreview(null);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Prefer OGG/Opus for best WhatsApp/Twilio compatibility, fall back to WebM if needed
-      let mimeType = '';
-      const supportedFormats = [
-        'audio/ogg;codecs=opus',  // WhatsApp-preferred, where supported
-        'audio/ogg',              // Generic OGG
-        'audio/webm;codecs=opus', // Common in Chrome/Edge
-        'audio/webm'              // Fallback if nothing else
-      ];
-
-      for (const format of supportedFormats) {
-        if (MediaRecorder.isTypeSupported(format)) {
-          mimeType = format;
-          break;
-        }
-      }
-
-      if (!mimeType) {
-        alert('Audio recording is not supported in this browser.');
-        return;
-      }
-
-      console.log('🎤 Starting audio recording with format:', mimeType);
-
-      const recorder = new MediaRecorder(stream, { mimeType });
-      const chunks = [];
-
-      recorder.ondataavailable = (e) => chunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mimeType });
-        const isOgg = mimeType.includes('ogg');
-        const extension = isOgg
-          ? 'ogg'
-          : mimeType.includes('wav')
-            ? 'wav'
-            : mimeType.includes('webm')
-              ? 'webm'
-              : 'audio';
-
-        // For OGG we normalize the file type to plain 'audio/ogg' (Twilio/WhatsApp friendly)
-        const fileMimeType = isOgg ? 'audio/ogg' : mimeType;
-        const audioFile = new File([blob], `voice-note.${extension}`, { type: fileMimeType });
-        const url = URL.createObjectURL(blob);
-
-        console.log("🎵 Audio recorded:", {
-          size: audioFile.size,
-          type: audioFile.type,
-          name: audioFile.name,
-          sizeMB: (audioFile.size / (1024 * 1024)).toFixed(2),
-          mimeType: mimeType,
-          extension: extension,
-          browserSupported: true
-        });
-
-        // Check size limit for audio (5MB max)
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        if (audioFile.size > maxSize) {
-          alert(`Audio file is too large (${(audioFile.size / (1024 * 1024)).toFixed(2)}MB). Maximum allowed size is 5MB. Please record a shorter message.`);
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-
-        setRecordedAudio(audioFile);
-        setSelectedMedia(audioFile);
-        setMediaPreview({
-          type: 'audio',
-          url: url,
-          file: audioFile,
-          isRecording: false
-        });
-
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      setMediaRecorder(recorder);
-      setIsRecording(true);
-      recorder.start();
-
-      setMediaPreview({
-        type: 'recording',
-        url: null,
-        isRecording: true
-      });
-
-      // Set a timeout to automatically stop recording after 2 minutes (120 seconds)
-      const recordingTimeout = setTimeout(() => {
-        if (isRecording) {
-          console.log('⏰ Recording timeout reached (2 minutes), stopping automatically');
-          stopRecording();
-        }
-      }, 120000); // 2 minutes
-
-      // Store timeout ID to clear it when recording stops manually
-      setRecordingTimeout(recordingTimeout);
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      alert('Could not access microphone. Please check permissions.');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      setIsRecording(false);
-      setMediaRecorder(null);
-    }
-
-    // Clear recording timeout if it exists
-    if (recordingTimeout) {
-      clearTimeout(recordingTimeout);
-      setRecordingTimeout(null);
-    }
-  };
-
   // Clear media selection
   const clearMedia = () => {
     setSelectedMedia(null);
     setMediaPreview(null);
-    setRecordedAudio(null);
-    if (mediaRecorder) {
-      mediaRecorder.stop();
-      setMediaRecorder(null);
-    }
-    setIsRecording(false);
   };
 
   // Request notification permission on mount
@@ -373,17 +242,7 @@ export default function InboxPage() {
     // until the Cloud Function + retry job attach the final OGG URL.
     if (msg.voiceNotePath && (!msg.media || (Array.isArray(msg.media) && msg.media.length === 0))) {
       return (
-        <div key="voice-note-pending" style={{
-          color: "#555",
-          fontSize: "0.85rem",
-          fontStyle: "italic",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.35rem"
-        }}>
-          <span>🎵</span>
-          <span>Voice note is processing… please wait a moment.</span>
-        </div>
+        <div key="voice-note-pending" />
       );
     }
 
@@ -1117,7 +976,6 @@ export default function InboxPage() {
           type: selectedMedia.type,
           size: selectedMedia.size,
           name: selectedMedia.name,
-          hasRecordedAudio: !!recordedAudio
         });
         try {
           // For images smaller than 1MB, convert to data URL (inline send to API)
@@ -1131,31 +989,7 @@ export default function InboxPage() {
             requestData.mediaType = selectedMedia.type;
             console.log("📎 Image converted to data URL for sending");
           }
-          // For recorded audio (voice notes), upload to Firebase Storage for server-side conversion to OGG
-          else if (recordedAudio && selectedMedia.type.startsWith('audio/') && selectedMedia.size <= 5 * 1024 * 1024) {
-            const storage = getStorage();
-            const voicePath = `companies/${tenantId}/voice-notes/${selectedTicket.id}/voice-note-${Date.now()}`;
-            const storageRef = ref(storage, voicePath);
-
-            console.log("🎵 Uploading voice note to Storage for conversion:", {
-              path: voicePath,
-              type: selectedMedia.type,
-              size: selectedMedia.size,
-            });
-
-            await uploadBytes(storageRef, selectedMedia, {
-              contentType: selectedMedia.type,
-            });
-
-            // Pass only the storage path; backend + Cloud Function will handle OGG conversion
-            // Use the path we constructed directly (fullPath might not be available immediately)
-            requestData.voiceNotePath = voicePath;
-            // We know the Cloud Function will convert this to OGG, so we can pre-set the mediaType
-            requestData.mediaType = 'audio/ogg';
-            console.log("🎵 Voice note uploaded, Storage path:", voicePath);
-            console.log("🎵 Request data will include voiceNotePath:", voicePath);
-          }
-          // For other audio/video files
+          // For audio/video files (no longer recording voice notes, just send as normal media)
           else if ((selectedMedia.type.startsWith('audio/') || selectedMedia.type.startsWith('video/')) && selectedMedia.size <= 5 * 1024 * 1024) {
             const mediaUrl = await new Promise((resolve) => {
               const reader = new FileReader();
@@ -2388,46 +2222,6 @@ export default function InboxPage() {
                   </div>
                 )}
 
-                {mediaPreview.type === 'recording' && (
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{
-                      width: "60px",
-                      height: "60px",
-                      borderRadius: "50%",
-                      backgroundColor: isRecording ? "#dc3545" : "#6c757d",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 1rem",
-                      animation: isRecording ? "pulse 1s infinite" : "none",
-                      boxShadow: isRecording ? "0 0 20px rgba(220, 53, 69, 0.5)" : "none"
-                    }}>
-                      <span style={{ fontSize: "1.5rem", color: "white" }}>
-                        {isRecording ? '🎤' : '⏹️'}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "0.875rem", color: "#6c757d" }}>
-                      {isRecording ? 'Recording voice note...' : 'Voice note ready'}
-                    </div>
-                    <div style={{ marginTop: "0.5rem" }}>
-                      <button
-                        onClick={isRecording ? stopRecording : clearMedia}
-                        style={{
-                          padding: "0.25rem 0.75rem",
-                          borderRadius: "4px",
-                          border: "1px solid #dee2e6",
-                          backgroundColor: isRecording ? "#dc3545" : "#6c757d",
-                          color: "white",
-                          cursor: "pointer",
-                          fontSize: "0.875rem"
-                        }}
-                      >
-                        {isRecording ? 'Stop Recording' : 'Cancel'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {mediaPreview.type === 'audio' && !mediaPreview.isRecording && (
                   <div>
                     <div style={{
@@ -2437,9 +2231,7 @@ export default function InboxPage() {
                       marginBottom: "0.5rem"
                     }}>
                       <span style={{ fontSize: "1.2rem" }}>🎵</span>
-                      <span style={{ fontSize: "0.875rem", fontWeight: "bold" }}>
-                        {recordedAudio ? 'Voice Note' : 'Audio File'}
-                      </span>
+                      <span style={{ fontSize: "0.875rem", fontWeight: "bold" }}>Audio File</span>
                     </div>
                     <audio
                       controls
@@ -2572,31 +2364,6 @@ export default function InboxPage() {
               boxSizing: "border-box"
             }}
           >
-              {/* Voice recording button */}
-              <button
-                type="button"
-                onClick={isRecording ? stopRecording : startRecording}
-                style={{
-                  fontSize: isMobile ? "1rem" : "1.25rem",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: isRecording ? "#ff3b30" : "#8e8e93",
-                  padding: isMobile ? "0.25rem" : "0.5rem",
-                  borderRadius: "50%",
-                  width: isMobile ? "32px" : "36px",
-                  height: isMobile ? "32px" : "36px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.2s ease",
-                  flexShrink: 0
-                }}
-                title={isRecording ? "Stop recording" : "Record voice note"}
-              >
-                {isRecording ? '⏹️' : '🎤'}
-              </button>
-
               {/* File input */}
               <label style={{
                 cursor: "pointer",
