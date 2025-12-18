@@ -420,15 +420,37 @@ export function AuthProvider({ children }) {
       const companyData = { id: companyId, ...companySnap.data() };
       console.log('Loaded company data:', companyData);
 
-      // If user is admin, set them as online
-      if (role === 'admin' && user) {
-        console.log('Setting admin as online...');
-        await updateDoc(companyRef, {
-          adminOnline: true,
-          adminLastSeen: new Date(),
-        });
-        companyData.adminOnline = true;
-        companyData.adminLastSeen = new Date();
+      // Set user as online after 20 second delay
+      if (user) {
+        console.log('⏳ Will set user online in 20 seconds...');
+        setTimeout(async () => {
+          try {
+            if (role === 'admin') {
+              console.log('📝 Setting admin as online after 20s delay...');
+              await updateDoc(companyRef, {
+                adminOnline: true,
+                adminLastSeen: new Date(),
+              });
+              setCompany(prev => prev ? { ...prev, adminOnline: true, adminLastSeen: new Date() } : null);
+              console.log('✅ Admin set to online');
+            } else if (role === 'respondent') {
+              console.log('📝 Setting respondent as online after 20s delay...');
+              const respondentsRef = collection(db, 'companies', companyId, 'respondents');
+              const q = query(respondentsRef, where('email', '==', user.email));
+              const snapshot = await getDocs(q);
+              
+              if (!snapshot.empty) {
+                await updateDoc(snapshot.docs[0].ref, {
+                  isOnline: true,
+                  lastSeen: new Date(),
+                });
+                console.log('✅ Respondent set to online');
+              }
+            }
+          } catch (error) {
+            console.error('❌ Error setting user online:', error);
+          }
+        }, 20000); // 20 second delay
       }
 
       setCompany(companyData);
