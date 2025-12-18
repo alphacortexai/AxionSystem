@@ -717,7 +717,7 @@ export function AuthProvider({ children }) {
         console.error('❌ Fallback sign out also failed:', signOutError);
       }
     }
-  }, []);
+  }, [company, user, userRole]);
 
   const value = {
     user,
