@@ -12,12 +12,15 @@ import {
   doc,
   updateDoc,
   getDoc,
+  getDocs,
   where,
 } from "firebase/firestore";
 import { getStorage, ref, getDownloadURL, uploadBytes } from "firebase/storage";
 
 export default function UserInboxPage() {
   const { user, company, selectedCompanyId, loading, contextLoading, userRole, updateRespondentStatus, logout } = useAuth();
+  const isAdmin = userRole === 'admin';
+  const isRespondent = userRole === 'respondent';
   const router = useRouter();
 
   // Core inbox state
@@ -220,8 +223,9 @@ export default function UserInboxPage() {
                 borderRadius: '6px',
                 border: '1px solid #e0e0e0',
                 cursor: 'pointer',
-                marginRight: '0.5rem',
-                verticalAlign: 'middle'
+                marginRight: '0.25rem',
+                verticalAlign: 'middle',
+                display: 'block'
               }}
               onClick={() => window.open(media.url, '_blank')}
             />
@@ -242,7 +246,7 @@ export default function UserInboxPage() {
 
         if (isImage) {
           content.push(
-            <div key={`media-${index}`} style={{ marginBottom: '0.5rem' }}>
+            <div key={`media-${index}`} style={{ marginBottom: '0rem' }}>
               <img
                 src={media.url}
                 alt="Image attachment"
@@ -251,7 +255,8 @@ export default function UserInboxPage() {
                   maxHeight: '250px',
                   borderRadius: '8px',
                   border: '1px solid #e0e0e0',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'block'
                 }}
                 onClick={() => window.open(media.url, '_blank')}
               />
@@ -746,6 +751,9 @@ export default function UserInboxPage() {
   }
 
   if (userRole === 'admin') {
+    useEffect(() => {
+      router.push('/inbox');
+    }, [router]);
     return (
       <div style={{
         display: 'flex',
@@ -760,6 +768,9 @@ export default function UserInboxPage() {
   }
 
   if (!company || !selectedCompanyId) {
+    useEffect(() => {
+      router.push('/user-dashboard');
+    }, [router]);
     return (
       <div style={{
         display: 'flex',
@@ -824,6 +835,31 @@ export default function UserInboxPage() {
           alignItems: "center"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <button
+              onClick={() => router.push('/user-dashboard')}
+              style={{
+                backgroundColor: "transparent",
+                border: "none",
+                color: "#007aff",
+                fontSize: "1.25rem",
+                cursor: "pointer",
+                padding: "0.25rem",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "#e6f3ff";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "transparent";
+              }}
+              title="Back to Dashboard"
+            >
+              ←
+            </button>
             <div style={{
               fontSize: "1.25rem",
               fontWeight: "600",
@@ -1006,7 +1042,7 @@ export default function UserInboxPage() {
               color: "#1d1d1f",
               flex: 1
             }}>
-              {selectedTicket ? `Chat with ${selectedTicket.customerId?.split('@')[0] || 'Customer'}` : 'My Inbox'}
+              {selectedTicket ? (selectedTicket.customerId?.split('@')[0] || 'Customer') : 'My Inbox'}
             </div>
             <button
               onClick={() => router.push('/user-dashboard')}
@@ -1027,7 +1063,26 @@ export default function UserInboxPage() {
               title="Back to dashboard"
             >
               <span style={{ fontSize: "1rem" }}>←</span>
-              <span>Dashboard</span>
+                <span>Dashboard</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                backgroundColor: "#f44336",
+                color: "white",
+                border: "none",
+                padding: "0.4rem 0.6rem",
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.8rem",
+                gap: "0.2rem"
+              }}
+              title="Logout"
+            >
+              🚪
             </button>
           </div>
         )}
@@ -1054,7 +1109,7 @@ export default function UserInboxPage() {
               flex: 1,
               minWidth: 0
             }}>
-              Chat with {selectedTicket.customerId?.split('@')[0] || 'Customer'}
+              {selectedTicket.customerId?.split('@')[0] || 'Customer'}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <button
@@ -1099,6 +1154,26 @@ export default function UserInboxPage() {
                   {showHistorySection ? "👁️ Hide History" : "📚 Show History"}
                 </button>
               )}
+              <button
+                onClick={handleLogout}
+                style={{
+                  fontSize: "0.85rem",
+                  padding: "0.5rem 0.9rem",
+                  borderRadius: "6px",
+                  border: "1px solid #f44336",
+                  backgroundColor: "#ffeaea",
+                  color: "#f44336",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  whiteSpace: "nowrap"
+                }}
+                title="Logout"
+              >
+                🚪 Logout
+              </button>
             </div>
           </div>
         )}
@@ -1441,12 +1516,46 @@ export default function UserInboxPage() {
                    (typeof msg.from === 'string' && msg.from.toLowerCase().includes('ai')));
                 const hasContent = msg.body || msg.hasMedia;
 
+                // Determine message type for appropriate padding
+                const hasImage = msg.hasMedia && msg.media?.some(m => m.contentType?.startsWith('image/'));
+                const hasAudio = msg.hasMedia && msg.media?.some(m => m.contentType?.startsWith('audio/'));
+                const hasVideo = msg.hasMedia && msg.media?.some(m => m.contentType?.startsWith('video/'));
+                const hasDocument = msg.hasMedia && msg.media?.some(m => 
+                  !m.contentType?.startsWith('image/') && 
+                  !m.contentType?.startsWith('audio/') && 
+                  !m.contentType?.startsWith('video/')
+                );
+                const isTextOnly = msg.body && !msg.hasMedia;
+
+                // Set padding and border radius based on content type
+                let bubblePadding;
+                let bubbleBorderRadius;
+                
+                if (hasImage || hasVideo) {
+                  // Minimal padding for images and videos
+                  bubblePadding = isMobile ? "0.2rem" : "0.15rem";
+                  // Reduced curve for media
+                  bubbleBorderRadius = isAgentMessage ? "12px 12px 3px 12px" : "12px 12px 12px 3px";
+                } else if (hasAudio) {
+                  // Medium padding for voice notes
+                  bubblePadding = isMobile ? "0.5rem" : "0.4rem";
+                  bubbleBorderRadius = isAgentMessage ? "14px 14px 3px 14px" : "14px 14px 14px 3px";
+                } else if (hasDocument) {
+                  // Good padding for documents
+                  bubblePadding = isMobile ? "0.75rem" : "0.65rem";
+                  bubbleBorderRadius = isAgentMessage ? "14px 14px 3px 14px" : "14px 14px 14px 3px";
+                } else {
+                  // Standard padding for text
+                  bubblePadding = isMobile ? "0.5rem 0.75rem" : "0.45rem 0.65rem";
+                  bubbleBorderRadius = isAgentMessage ? "16px 16px 4px 16px" : "16px 16px 16px 4px";
+                }
+
                 if (!hasContent) return null;
 
                 return (
                   <div key={msg.id} style={{
                     display: "flex",
-                    marginBottom: "0.75rem",
+                    marginBottom: "0.3rem",
                     justifyContent: isAgentMessage ? "flex-end" : "flex-start",
                     alignItems: "flex-end",
                     gap: "0.25rem"
@@ -1461,8 +1570,8 @@ export default function UserInboxPage() {
                             ? "#fff4e5"
                             : "#ffffff",
                       color: "#111b21",
-                      padding: isMobile ? "0.875rem" : "0.75rem",
-                      borderRadius: isAgentMessage ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                      padding: bubblePadding,
+                      borderRadius: bubbleBorderRadius,
                       boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
                       position: "relative",
                       wordWrap: "break-word",
@@ -1473,8 +1582,8 @@ export default function UserInboxPage() {
                           ? "1px solid #ffd8a8"
                           : "1px solid rgba(0,0,0,0.06)",
                       backdropFilter: "blur(10px)",
-                      fontSize: isMobile ? "0.9375rem" : "1rem",
-                      lineHeight: "1.4",
+                      fontSize: isMobile ? "13px" : "14px",
+                      lineHeight: isMobile ? "18px" : "20px",
                       marginLeft: !isAgentMessage ? (isMobile ? "5px" : "15px") : 0,
                       marginRight: isAgentMessage ? (isMobile ? "5px" : "15px") : 0
                     }}>
@@ -1499,6 +1608,25 @@ export default function UserInboxPage() {
                           opacity: 0.8
                         }}>
                           Error: {msg.errorCode}
+                        </div>
+                      )}
+
+                      {/* Delivery Status Indicator for Agent Messages */}
+                      {isAgentMessage && msg.deliveryStatus && (
+                        <div style={{
+                          fontSize: "0.65rem",
+                          marginTop: "0.25rem",
+                          color: "#666",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          justifyContent: "flex-end"
+                        }}>
+                          {msg.deliveryStatus === 'delivered' && <span>✓✓</span>}
+                          {msg.deliveryStatus === 'read' && <span style={{ color: "#34b7f1" }}>✓✓</span>}
+                          {msg.deliveryStatus === 'sent' && <span>✓</span>}
+                          {msg.deliveryStatus === 'failed' && <span style={{ color: "#ff3b30" }}>✗</span>}
+                          {msg.deliveryStatus === 'undelivered' && <span style={{ color: "#ff9800" }}>!</span>}
                         </div>
                       )}
                     </div>

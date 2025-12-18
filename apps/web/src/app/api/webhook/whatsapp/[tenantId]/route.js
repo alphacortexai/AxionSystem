@@ -378,8 +378,10 @@ export async function POST(request, { params }) {
       }
 
       // Decide if AI should be auto-enabled on creation:
-      // only when NO respondents are online/recently-online AND admin is offline.
+      // only when NO respondents are online/recently-online AND admin is offline
+      // AND company has auto-enable AI setting enabled (default: false)
       const shouldEnableAIByDefault =
+        company.autoEnableAI === true &&
         onlineRespondents.length === 0 &&
         recentlyOnlineRespondents.length === 0 &&
         company.adminOnline !== true;
@@ -510,8 +512,17 @@ export async function POST(request, { params }) {
         console.log(`   - Recently active (5min): ${wasRecentlyActive}`);
         console.log(`   - Effectively offline: ${isEffectivelyOffline}`);
 
-        // AI responds if respondent is effectively offline
-        aiShouldRespond = isEffectivelyOffline;
+        // AI responds only if:
+        // 1. AI is enabled on the ticket (respects manual toggle), AND
+        // 2. Respondent is effectively offline, OR
+        // 3. autoEnableAI is true and respondent is offline (auto-enable when no one online)
+        if (aiEnabled) {
+          // AI is manually ON - respond if respondent is offline
+          aiShouldRespond = isEffectivelyOffline;
+        } else {
+          // AI is manually OFF - only enable if autoEnableAI is true AND respondent is offline
+          aiShouldRespond = company.autoEnableAI === true && isEffectivelyOffline;
+        }
 
         console.log(`👤 Assigned respondent ${ticketDocData.assignedTo}:`);
         console.log(`   - Currently online: ${isCurrentlyOnline}`);

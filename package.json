@@ -1,0 +1,26 @@
+{
+  "name": "axion-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI agent customer service platform",
+  "scripts": {
+    "dev": "npm run dev:api & npm run dev:web",
+    "dev:api": "cd apps/api && node index.js",
+    "dev:web": "cd apps/web && npm run dev",
+    "start:api": "cd apps/api && node index.js",
+    "start:web": "cd apps/web && npm start",
+    "build:web": "cd apps/web && npm run build",
+    "install:all": "cd apps/api && npm install && cd ../web && npm install"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "keywords": [
+    "ai",
+    "customer-service",
+    "whatsapp",
+    "chatbot"
+  ],
+  "author": "",
+  "license": "ISC"
+}

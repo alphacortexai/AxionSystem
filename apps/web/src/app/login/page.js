@@ -3,10 +3,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/auth-context';
+import { useToast } from '../../components/Toast';
 
 export default function LoginPage() {
   const { user, userCompanies, respondentCompanies, selectedCompanyId, userRole, loading, contextLoading, signInWithGoogle } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   useEffect(() => {
     // Wait for both auth loading and context loading to complete
@@ -39,7 +41,7 @@ export default function LoginPage() {
       await signInWithGoogle();
     } catch (error) {
       console.error('Login failed:', error);
-      alert('Login failed. Please try again.');
+      toast.error('Login failed. Please try again.');
     }
   };
 
@@ -54,7 +56,7 @@ export default function LoginPage() {
         fontSize: '18px'
       }}>
         <div style={{ marginBottom: '1rem' }}>
-          {loading ? 'Signing you in...' : 'Loading your companies...X'}
+          {loading ? 'Signing you in...' : 'Loading your companies...'}
         </div>
         <div style={{ fontSize: '14px', color: '#666' }}>
           Setting up your workspace

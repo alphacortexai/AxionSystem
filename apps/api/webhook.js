@@ -55,6 +55,7 @@ const serviceAccount = require("./axion256system-firebase-adminsdk-fbsvc-bbb9336
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
+    storageBucket: "axion256system.firebasestorage.app"
   });
 }
 
@@ -99,6 +100,8 @@ async function assignTicketToRespondent(ticketRef, tenantId, company) {
 
     let assignedTo = null;
     let assignedEmail = null;
+    let onlineRespondents = [];
+    let recentlyOnlineRespondents = [];
 
     if (!respondentsSnap.empty) {
       const respondents = respondentsSnap.docs.map(doc => ({
@@ -115,11 +118,11 @@ async function assignTicketToRespondent(ticketRef, tenantId, company) {
       })));
 
       // Priority 1: Assign to online respondents first
-      const onlineRespondents = respondents.filter(r => r.isOnline === true);
+      onlineRespondents = respondents.filter(r => r.isOnline === true);
       console.log(`🟢 Online respondents: ${onlineRespondents.length}`);
 
       // Priority 1.5: Also consider recently online respondents (last 5 minutes)
-      const recentlyOnlineRespondents = respondents.filter(r => {
+      recentlyOnlineRespondents = respondents.filter(r => {
         if (r.lastSeen) {
           const lastSeen = r.lastSeen.toDate ? r.lastSeen.toDate() : new Date(r.lastSeen);
           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
@@ -208,15 +211,6 @@ async function assignTicketToRespondent(ticketRef, tenantId, company) {
         assignedEmail = assignedRespondent.email;
         console.log(`📧 Assigned conversation to: ${assignedTo} (${assignedEmail})`);
       }
-
-      // TEMPORARY DEBUG: Force assign to first respondent if admin would be assigned
-      if (!assignedTo && respondents.length > 0) {
-        console.log('🔧 DEBUG: Forcing assignment to first respondent for testing');
-        const firstRespondent = respondents[0];
-        assignedTo = firstRespondent.name || firstRespondent.email.split('@')[0];
-        assignedEmail = firstRespondent.email;
-        console.log(`🎯 DEBUG: Force assigned to: ${assignedTo} (${assignedEmail})`);
-      }
     }
 
     // If no respondents available or assignment failed, assign to admin
@@ -225,6 +219,11 @@ async function assignTicketToRespondent(ticketRef, tenantId, company) {
       assignedEmail = null;
       console.log(`👨‍💼 No respondents available, assigned to Admin`);
     }
+
+    // Fetch company data to check admin online status
+    const companyRef = db.collection('companies').doc(tenantId);
+    const companySnap = await companyRef.get();
+    const companyData = companySnap.exists ? companySnap.data() : {};
 
     // Determine if there are *any* online or recently-online humans
     const anyOnlineOrRecentlyOnline =
@@ -913,8 +912,7 @@ app.get("/debug/respondents/:tenantId", async (req, res) => {
     const tenantId = req.params.tenantId;
 
     const respondentsRef = db.collection('companies').doc(tenantId).collection('respondents');
-    const activeRespondentsQuery = query(respondentsRef, where('status', '==', 'active'));
-    const respondentsSnap = await getDocs(activeRespondentsQuery);
+    const respondentsSnap = await respondentsRef.where('status', '==', 'active').get();
 
     const respondents = respondentsSnap.docs.map(doc => ({
       id: doc.id,

@@ -17,6 +17,7 @@ export default function SettingsPage() {
     aiStartingMessage: '',
     aiPromptTemplate: '',
     aiWaitMinutes: 5, // Default 5 minutes
+    autoEnableAI: false, // Auto-enable AI when no one is online
     showUserInitials: true, // Show user initials in messages
     notifyAgentJoin: true, // Notify when human agent joins
     notifyAiTakeover: true, // Notify when AI takes over
@@ -41,6 +42,7 @@ export default function SettingsPage() {
         aiStartingMessage: company.aiStartingMessage || '',
         aiPromptTemplate: company.aiPromptTemplate || '',
         aiWaitMinutes: company.aiWaitMinutes || 5,
+        autoEnableAI: company.autoEnableAI === true, // Default false
         showUserInitials: company.showUserInitials !== false, // Default true
         notifyAgentJoin: company.notifyAgentJoin !== false, // Default true
         notifyAiTakeover: company.notifyAiTakeover !== false, // Default true
@@ -360,6 +362,21 @@ export default function SettingsPage() {
                 </select>
                 <small style={{ color: '#666', display: 'block', marginTop: '0.5rem' }}>
                   How long AI should wait after a respondent goes offline before responding to customer messages.
+                </small>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.autoEnableAI}
+                    onChange={(e) => handleInputChange('autoEnableAI', e.target.checked)}
+                    style={{ width: '16px', height: '16px' }}
+                  />
+                  Auto-Enable AI When No One is Online
+                </label>
+                <small style={{ color: '#666', display: 'block', marginTop: '0.25rem' }}>
+                  Automatically enable AI to respond to messages when no human agents or admins are online.
                 </small>
               </div>
 

@@ -46,6 +46,11 @@ export default function InboxPage() {
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  // Recording state variables
+  const [recordedAudio, setRecordedAudio] = useState(null);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
 
   // Dropdown menu state
   const [showDropdownMenu, setShowDropdownMenu] = useState(false);
@@ -53,6 +58,26 @@ export default function InboxPage() {
   // Mobile responsiveness (must be declared before any early returns)
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState({
+    title: '',
+    message: '',
+    onConfirm: null,
+    confirmText: 'Confirm',
+    cancelText: 'Cancel',
+    type: 'warning' // 'warning', 'danger', 'info'
+  });
+
+  // Notification state
+  const [notification, setNotification] = useState(null);
+
+  // Show notification function
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000); // Auto-hide after 3 seconds
+  };
 
   // Close emoji picker and dropdown when clicking outside
   useEffect(() => {
@@ -82,6 +107,11 @@ export default function InboxPage() {
       @keyframes slideIn {
         from { transform: translateY(20px); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
+      }
+
+      @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
 
       .message-bubble {
@@ -286,8 +316,9 @@ export default function InboxPage() {
                 borderRadius: '6px',
                 border: '1px solid #e0e0e0',
                 cursor: 'pointer',
-                marginRight: '0.5rem',
-                verticalAlign: 'middle'
+                marginRight: '0.25rem',
+                verticalAlign: 'middle',
+                display: 'block'
               }}
               onClick={() => window.open(media.url, '_blank')}
               onLoad={() => console.log('✅ Image loaded successfully:', media.url)}
@@ -348,7 +379,7 @@ export default function InboxPage() {
         if (isImage) {
           console.log('🎴 Rendering image media:', media);
           content.push(
-            <div key={`media-${index}`} style={{ marginBottom: '0.5rem' }}>
+            <div key={`media-${index}`} style={{ marginBottom: '0rem' }}>
               <img
                 src={media.url}
                 alt="Image attachment"
@@ -357,7 +388,8 @@ export default function InboxPage() {
                   maxHeight: '250px',
                   borderRadius: '8px',
                   border: '1px solid #e0e0e0',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  display: 'block'
                 }}
                 onClick={() => window.open(media.url, '_blank')}
                 onLoad={() => console.log('✅ Image loaded successfully:', media.url)}
@@ -1090,37 +1122,44 @@ export default function InboxPage() {
     }
   }
 
-  async function handleDeleteTicket() {
+  function handleDeleteTicket() {
     if (!selectedTicket) return;
 
-    if (!confirm(`Are you sure you want to delete this ticket with ${selectedTicket.customerId || 'Unknown'}? This action cannot be undone.`)) {
-      return;
-    }
+    setConfirmModalData({
+      title: '⚠️ Delete Ticket',
+      message: `Are you sure you want to delete this ticket with ${selectedTicket.customerId || 'Unknown'}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          setIsDeleting(true);
+          setShowConfirmModal(false);
 
-    try {
-      setIsDeleting(true);
+          // Delete all messages in the ticket
+          const messagesRef = collection(db, "companies", tenantId, "tickets", selectedTicket.id, "messages");
+          const messagesSnap = await getDocs(messagesRef);
 
-      // Delete all messages in the ticket
-      const messagesRef = collection(db, "companies", tenantId, "tickets", selectedTicket.id, "messages");
-      const messagesSnap = await getDocs(messagesRef);
+          const deletePromises = messagesSnap.docs.map(doc => deleteDoc(doc.ref));
+          await Promise.all(deletePromises);
 
-      const deletePromises = messagesSnap.docs.map(doc => deleteDoc(doc.ref));
-      await Promise.all(deletePromises);
+          // Delete the ticket document
+          const ticketRef = doc(db, "companies", tenantId, "tickets", selectedTicket.id);
+          await deleteDoc(ticketRef);
 
-      // Delete the ticket document
-      const ticketRef = doc(db, "companies", tenantId, "tickets", selectedTicket.id);
-      await deleteDoc(ticketRef);
+          setSelectedTicket(null);
+          setMessages([]);
+          showNotification("Ticket deleted successfully!", "success");
 
-      setSelectedTicket(null);
-      setMessages([]);
-      alert("Ticket deleted successfully.");
-
-    } catch (err) {
-      console.error("Error deleting ticket:", err);
-      alert("Failed to delete ticket. Check console for details.");
-    } finally {
-      setIsDeleting(false);
-    }
+        } catch (err) {
+          console.error("Error deleting ticket:", err);
+          showNotification("Failed to delete ticket. Please try again.", "error");
+        } finally {
+          setIsDeleting(false);
+        }
+      }
+    });
+    setShowConfirmModal(true);
   }
 
   useEffect(() => {
@@ -1261,6 +1300,31 @@ export default function InboxPage() {
           alignItems: "center"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <button
+              onClick={() => router.push('/dashboard')}
+              style={{
+                backgroundColor: "transparent",
+                border: "none",
+                color: "#007aff",
+                fontSize: "1.25rem",
+                cursor: "pointer",
+                padding: "0.25rem",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s ease"
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "#e6f3ff";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "transparent";
+              }}
+              title="Back to Dashboard"
+            >
+              ←
+            </button>
             <div style={{
               fontSize: "1.25rem",
               fontWeight: "600",
@@ -1476,8 +1540,10 @@ export default function InboxPage() {
           <div
             style={{
               marginTop: "0.75rem",
-              padding: isMobile ? "0.75rem" : "1rem",
               paddingTop: "0.75rem",
+              paddingRight: isMobile ? "0.75rem" : "1rem",
+              paddingBottom: isMobile ? "0.75rem" : "1rem",
+              paddingLeft: isMobile ? "0.75rem" : "1rem",
               borderTop: "1px solid #eee",
               backgroundColor: "#fafafa",
               borderRadius: "8px"
@@ -1629,9 +1695,31 @@ export default function InboxPage() {
               color: "#1d1d1f",
               flex: 1
             }}>
-              {selectedTicket ? `Chat with ${selectedTicket.customerId?.split('@')[0] || 'Customer'}` : 'Inbox'}
+              {selectedTicket ? (selectedTicket.customerId?.split('@')[0] || 'Customer') : 'Inbox'}
             </div>
-            {selectedTicket && (
+            {!selectedTicket ? (
+              <button
+                onClick={() => router.push('/dashboard')}
+                style={{
+                  backgroundColor: "transparent",
+                  border: "1px solid #e5e5ea",
+                  padding: "0.4rem 0.6rem",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#007aff",
+                  fontSize: "0.9rem",
+                  gap: "0.3rem",
+                  whiteSpace: "nowrap"
+                }}
+                title="Back to dashboard"
+              >
+                <span style={{ fontSize: "1rem" }}>←</span>
+                <span>Dashboard</span>
+              </button>
+            ) : selectedTicket && (
               <>
                 {/* Mobile Dropdown Menu */}
                 <div className="dropdown-menu" style={{ position: 'relative' }}>
@@ -1835,7 +1923,7 @@ export default function InboxPage() {
               flex: 1,
               minWidth: 0
             }}>
-              Chat with {selectedTicket.customerId?.split('@')[0] || 'Customer'}
+              {selectedTicket.customerId?.split('@')[0] || 'Customer'}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               {/* Dropdown Menu */}
@@ -2404,7 +2492,7 @@ export default function InboxPage() {
                 return (
                 <div key={msg.id} style={{
                     display: "flex",
-                    marginBottom: "0.75rem",
+                    marginBottom: "0.3rem",
                     justifyContent: isAgentMessage ? "flex-end" : "flex-start",
                     alignItems: "flex-end",
                     gap: "0.25rem"
@@ -2420,7 +2508,10 @@ export default function InboxPage() {
                             ? "#fff4e5" // very light orange-cream for AI
                             : "#ffffff",
                       color: "#111b21",
-                      padding: isMobile ? "0.875rem" : "0.75rem",
+                      paddingTop: isMobile ? "0.5rem" : "0.45rem",
+                      paddingRight: isMobile ? "0.75rem" : "0.65rem",
+                      paddingBottom: isMobile ? "0.5rem" : "0.45rem",
+                      paddingLeft: isMobile ? "0.75rem" : "0.65rem",
                       borderRadius: isAgentMessage ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
                       position: "relative",
@@ -2432,8 +2523,8 @@ export default function InboxPage() {
                           ? "1px solid #ffd8a8"
                           : "1px solid rgba(0,0,0,0.06)",
                       backdropFilter: "blur(10px)",
-                      fontSize: isMobile ? "0.9375rem" : "1rem",
-                      lineHeight: "1.4",
+                      fontSize: isMobile ? "13px" : "14px",
+                      lineHeight: isMobile ? "18px" : "20px",
                       marginLeft: !isAgentMessage ? (isMobile ? "5px" : "15px") : 0,
                       marginRight: isAgentMessage ? (isMobile ? "5px" : "15px") : 0
                     }}>
@@ -2463,6 +2554,25 @@ export default function InboxPage() {
                           Error: {msg.errorCode}
                     </div>
                   )}
+
+                      {/* Delivery Status Indicator for Agent Messages */}
+                      {isAgentMessage && msg.deliveryStatus && (
+                        <div style={{
+                          fontSize: "0.65rem",
+                          marginTop: "0.25rem",
+                          color: "#666",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          justifyContent: "flex-end"
+                        }}>
+                          {msg.deliveryStatus === 'delivered' && <span>✓✓</span>}
+                          {msg.deliveryStatus === 'read' && <span style={{ color: "#34b7f1" }}>✓✓</span>}
+                          {msg.deliveryStatus === 'sent' && <span>✓</span>}
+                          {msg.deliveryStatus === 'failed' && <span style={{ color: "#ff3b30" }}>✗</span>}
+                          {msg.deliveryStatus === 'undelivered' && <span style={{ color: "#ff9800" }}>!</span>}
+                        </div>
+                      )}
                 </div>
 
                   </div>
@@ -2470,7 +2580,41 @@ export default function InboxPage() {
               })}
             </div>
           ) : (
-            <p>Select a ticket</p>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100%',
+              minHeight: '200px'
+            }}>
+              <div style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e5ea',
+                borderRadius: '12px',
+                padding: '2rem',
+                textAlign: 'center',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                maxWidth: '300px'
+              }}>
+                <div style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  color: '#333',
+                  marginBottom: '0.5rem'
+                }}>
+                  {tickets.length > 0 ? 'Select a ticket' : 'No tickets exist'}
+                </div>
+                {tickets.length === 0 && (
+                  <div style={{
+                    fontSize: '0.875rem',
+                    color: '#666',
+                    marginTop: '0.5rem'
+                  }}>
+                    No conversations have been started yet
+                  </div>
+                )}
+              </div>
+            </div>
           )}
         </div>
 
@@ -2849,6 +2993,184 @@ export default function InboxPage() {
           </div>
         )}
       </div>
+
+      {/* Custom Confirmation Modal */}
+      {showConfirmModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 10000,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "16px",
+            padding: "2rem",
+            maxWidth: "450px",
+            width: "90%",
+            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+            animation: "slideIn 0.3s ease-out"
+          }}>
+            {/* Icon and Title */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem",
+              marginBottom: "1.5rem"
+            }}>
+              <div style={{
+                fontSize: "2.5rem",
+                width: "60px",
+                height: "60px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: confirmModalData.type === 'danger' 
+                  ? "#fee" 
+                  : confirmModalData.type === 'warning' 
+                    ? "#fff4e5" 
+                    : "#e3f2fd"
+              }}>
+                {confirmModalData.type === 'danger' && '🗑️'}
+                {confirmModalData.type === 'warning' && '⚠️'}
+                {confirmModalData.type === 'info' && 'ℹ️'}
+              </div>
+              <h2 style={{
+                margin: 0,
+                fontSize: "1.5rem",
+                fontWeight: "600",
+                color: "#1d1d1f"
+              }}>
+                {confirmModalData.title}
+              </h2>
+            </div>
+
+            {/* Message */}
+            <p style={{
+              margin: "0 0 2rem 0",
+              fontSize: "1rem",
+              lineHeight: "1.6",
+              color: "#666"
+            }}>
+              {confirmModalData.message}
+            </p>
+
+            {/* Action Buttons */}
+            <div style={{
+              display: "flex",
+              gap: "1rem",
+              justifyContent: "flex-end"
+            }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e5ea",
+                  backgroundColor: "#ffffff",
+                  color: "#666",
+                  fontSize: "1rem",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease"
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = "#f5f5f7";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = "#ffffff";
+                }}
+              >
+                {confirmModalData.cancelText}
+              </button>
+              <button
+                onClick={confirmModalData.onConfirm}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: confirmModalData.type === 'danger' 
+                    ? "#ff3b30" 
+                    : confirmModalData.type === 'warning' 
+                      ? "#ff9500" 
+                      : "#007aff",
+                  color: "#ffffff",
+                  fontSize: "1rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)"
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = "translateY(-1px)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.15)";
+                }}
+              >
+                {confirmModalData.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Toast */}
+      {notification && (
+        <div style={{
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          backgroundColor: notification.type === 'success' ? "#4caf50" : "#f44336",
+          color: "white",
+          padding: "1rem 1.5rem",
+          borderRadius: "12px",
+          boxShadow: "0 4px 16px rgba(0, 0, 0, 0.2)",
+          zIndex: 10001,
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          minWidth: "280px",
+          animation: "slideInRight 0.3s ease-out"
+        }}>
+          <span style={{ fontSize: "1.5rem" }}>
+            {notification.type === 'success' ? '✓' : '✗'}
+          </span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: "600", marginBottom: "0.125rem" }}>
+              {notification.type === 'success' ? 'Success' : 'Error'}
+            </div>
+            <div style={{ fontSize: "0.9rem", opacity: 0.95 }}>
+              {notification.message}
+            </div>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "white",
+              fontSize: "1.25rem",
+              cursor: "pointer",
+              padding: "0",
+              opacity: 0.8,
+              lineHeight: 1
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

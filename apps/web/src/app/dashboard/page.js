@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../lib/auth-context';
@@ -7,6 +7,28 @@ import { useAuth } from '../../lib/auth-context';
 export default function DashboardPage() {
   const { user, company, userCompanies, respondentCompanies, selectedCompanyId, userRole, loading, contextLoading, logout, selectCompanyContext } = useAuth();
   const router = useRouter();
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // Handle responsive detection safely (SSR-compatible)
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showMobileMenu && !event.target.closest('.mobile-menu-container')) {
+        setShowMobileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMobileMenu]);
 
   useEffect(() => {
     if (!loading && !contextLoading && !user) {
@@ -53,6 +75,9 @@ export default function DashboardPage() {
   }
 
   if (!contextLoading && (!company || !selectedCompanyId)) {
+    useEffect(() => {
+      router.push('/user-dashboard');
+    }, [router]);
     return (
       <div style={{
         display: 'flex',
@@ -75,7 +100,7 @@ export default function DashboardPage() {
       {/* Header */}
       <header style={{
         backgroundColor: 'white',
-        padding: typeof window !== 'undefined' && window.innerWidth <= 768 ? '0.75rem 1rem' : '1rem 2rem',
+        padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
         borderBottom: '1px solid #e0e0e0',
         display: 'flex',
         justifyContent: 'space-between',
@@ -95,47 +120,152 @@ export default function DashboardPage() {
           <span style={{ color: '#666', fontSize: '0.9rem' }}>Channel Dashboard</span>
         </div>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-          flexWrap: 'wrap',
-          maxWidth: '100%',
-          justifyContent: typeof window !== 'undefined' && window.innerWidth <= 768 ? 'flex-start' : 'flex-end'
-        }}>
-          <span style={{ color: '#666', fontSize: '14px', wordBreak: 'break-all' }}>{user.email}</span>
-          {company && (
-            <span style={{
-              backgroundColor: userRole === 'admin' ? '#4caf50' : '#2196f3',
-              color: 'white',
-              padding: '0.125rem 0.5rem',
-              borderRadius: '10px',
-              fontSize: '10px',
-              fontWeight: 'bold'
-            }}>
-              {company.name} • {userRole?.toUpperCase()}
-            </span>
-          )}
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Logout
-          </button>
-        </div>
+        {/* Desktop: Show user info inline */}
+        {!isMobile && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            flexWrap: 'wrap',
+            maxWidth: '100%'
+          }}>
+            <span style={{ color: '#666', fontSize: '14px', wordBreak: 'break-all' }}>{user.email}</span>
+            {company && (
+              <span style={{
+                backgroundColor: userRole === 'admin' ? '#4caf50' : '#2196f3',
+                color: 'white',
+                padding: '0.125rem 0.5rem',
+                borderRadius: '10px',
+                fontSize: '10px',
+                fontWeight: 'bold'
+              }}>
+                {company.name} • {userRole?.toUpperCase()}
+              </span>
+            )}
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Logout
+            </button>
+          </div>
+        )}
+
+        {/* Mobile: Show dropdown menu button */}
+        {isMobile && (
+          <div className="mobile-menu-container" style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              style={{
+                padding: '0.5rem',
+                backgroundColor: 'transparent',
+                border: '1px solid #e0e0e0',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '1.25rem'
+              }}
+            >
+              ☰
+            </button>
+
+            {/* Mobile Dropdown Menu */}
+            {showMobileMenu && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '0.5rem',
+                backgroundColor: 'white',
+                border: '1px solid #e0e0e0',
+                borderRadius: '12px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                minWidth: '280px',
+                zIndex: 1000,
+                overflow: 'hidden'
+              }}>
+                {/* User Info Section */}
+                <div style={{
+                  padding: '1rem',
+                  borderBottom: '1px solid #e0e0e0',
+                  backgroundColor: '#f9f9f9'
+                }}>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: '#999',
+                    marginBottom: '0.25rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    Logged in as
+                  </div>
+                  <div style={{
+                    fontSize: '0.9rem',
+                    color: '#333',
+                    fontWeight: '500',
+                    wordBreak: 'break-all',
+                    marginBottom: '0.5rem'
+                  }}>
+                    {user.email}
+                  </div>
+                  {company && (
+                    <div style={{
+                      display: 'inline-block',
+                      backgroundColor: userRole === 'admin' ? '#4caf50' : '#2196f3',
+                      color: 'white',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '12px',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold'
+                    }}>
+                      {company.name} • {userRole?.toUpperCase()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(false);
+                    handleLogout();
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: '#f44336',
+                    fontSize: '0.95rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span style={{ fontSize: '1.1rem' }}>🚪</span>
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       {/* Channel Selector */}
       <main style={{
-        padding: typeof window !== 'undefined' && window.innerWidth <= 768 ? '1.5rem 1rem' : '2.5rem 2rem'
+        padding: isMobile ? '1.5rem 1rem' : '2.5rem 2rem'
       }}>
         <div style={{
           maxWidth: '960px',

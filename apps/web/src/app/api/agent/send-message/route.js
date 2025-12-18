@@ -268,6 +268,7 @@ export async function POST(request) {
         const messageParams = {
           from: fromWhatsApp,
           to: toWhatsApp,
+          statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://your-domain.com'}/api/webhooks/twilio-status`,
         };
 
         // Add text content if provided
@@ -362,6 +363,13 @@ export async function POST(request) {
         const result = await companyTwilioClient.messages.create(messageParams);
         console.log(`✅ Twilio message sent successfully:`, result.sid);
         console.log(`📊 Full Twilio response:`, JSON.stringify(result, null, 2));
+
+        // Store Twilio message SID and initial status in the message document
+        await agentMsgRef.update({
+          twilioMessageSid: result.sid,
+          deliveryStatus: result.status || 'queued',
+          lastStatusUpdate: admin.firestore.FieldValue.serverTimestamp()
+        });
 
         // Check for any Twilio warnings or errors in the response
         if (result.status && result.status !== 'queued' && result.status !== 'sent') {

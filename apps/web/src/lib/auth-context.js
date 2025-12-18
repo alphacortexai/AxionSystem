@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { auth, db, googleProvider } from './firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc, query, where } from 'firebase/firestore';
@@ -226,23 +226,30 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error) {
-      console.error('Error signing in with Google:', error);
-      throw error;
+      // Handle specific Firebase auth errors gracefully
+      if (error.code === 'auth/cancelled-popup-request') {
+        // User closed the popup - don't treat as an error
+        console.log('Google sign-in popup was cancelled by user');
+        return;
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // User closed the popup - alternative error code
+        console.log('Google sign-in popup was closed by user');
+        return;
+      } else if (error.code === 'auth/popup-blocked') {
+        // Popup was blocked by browser
+        console.error('Google sign-in popup was blocked by browser');
+        throw new Error('Popup was blocked by your browser. Please allow popups for this site.');
+      } else {
+        // Other errors
+        console.error('Error signing in with Google:', error);
+        throw error;
+      }
     }
-  };
-
-  const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error('Error signing out:', error);
-      throw error;
-    }
-  };
+  }, []);
 
   const updateCompanySettings = async (settings) => {
     if (!company) return;
@@ -289,9 +296,10 @@ export function AuthProvider({ children }) {
       throw new Error('Only admins can invite respondents');
     }
 
-    // Validate Gmail email
-    if (!email.endsWith('@gmail.com')) {
-      throw new Error('Respondents must use Gmail addresses only');
+    // Validate email format (allow any valid email for Google Workspace compatibility)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new Error('Please enter a valid email address');
     }
 
     try {
@@ -454,12 +462,10 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const updateRespondentStatus = async (isOnline, wasPreviouslyOffline = false) => {
+  const updateRespondentStatus = useCallback(async (isOnline, wasPreviouslyOffline = false) => {
     if (!company || userRole !== 'respondent') return;
 
     try {
-      console.log(`🔄 [${new Date().toISOString()}] Updating respondent status: ${user.email} -> ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
-
       // Find the respondent document for current user
       const respondentsRef = collection(db, 'companies', company.id, 'respondents');
       const q = query(respondentsRef, where('email', '==', user.email));
@@ -476,15 +482,11 @@ export function AuthProvider({ children }) {
         if (isOnline && wasPreviouslyOffline) {
           await turnOffAIForAssignedTickets();
         }
-
-        console.log(`✅ Respondent status updated successfully for ${user.email}`);
-      } else {
-        console.log(`❌ Respondent document not found for ${user.email}`);
       }
     } catch (error) {
-      console.error('❌ Error updating respondent status:', error);
+      console.error('Error updating respondent status:', error);
     }
-  };
+  }, [company, userRole, user?.email]);
 
   const turnOffAIForAssignedTickets = async () => {
     if (!company || userRole !== 'respondent') return;
@@ -589,8 +591,8 @@ export function AuthProvider({ children }) {
           });
 
           // Add a system message notifying about admin coming online and AI turning off
-          const systemMsgRef = ticketDoc.ref.collection('messages').doc(`system-admin-online-${Date.now()}`);
-          await systemMsgRef.set({
+          const systemMsgRef = doc(collection(db, ticketDoc.ref.path, 'messages'), `system-admin-online-${Date.now()}`);
+          await setDoc(systemMsgRef, {
             from: "System",
             role: "system",
             body: `👋 Admin ${user.displayName || user.email.split('@')[0]} has come online. AI assistant is now offline.`,
@@ -640,6 +642,82 @@ export function AuthProvider({ children }) {
       throw error;
     }
   };
+
+  const logout = useCallback(async () => {
+    const currentCompany = company;
+    const currentUser = user;
+    const currentUserRole = userRole;
+    
+    console.log('🚪 Logout initiated...');
+    
+    try {
+      // STEP 1: Set user status to offline BEFORE signing out
+      if (currentCompany && currentUser) {
+        if (currentUserRole === 'respondent') {
+          console.log('📝 Setting respondent offline on logout...');
+          const respondentsRef = collection(db, 'companies', currentCompany.id, 'respondents');
+          const q = query(respondentsRef, where('email', '==', currentUser.email));
+          const snapshot = await getDocs(q);
+          
+          if (!snapshot.empty) {
+            await updateDoc(snapshot.docs[0].ref, {
+              isOnline: false,
+              lastSeen: new Date(),
+            });
+            console.log('✅ Respondent isOnline set to FALSE');
+          } else {
+            console.warn('⚠️ Respondent document not found');
+          }
+        } else if (currentUserRole === 'admin') {
+          console.log('📝 Setting admin offline on logout...');
+          const companyRef = doc(db, 'companies', currentCompany.id);
+          await updateDoc(companyRef, {
+            adminOnline: false,
+            adminLastSeen: new Date(),
+          });
+          console.log('✅ Admin adminOnline set to FALSE');
+        }
+        
+        // STEP 2: If autoEnableAI is enabled, turn on AI for all open tickets
+        if (currentCompany.autoEnableAI === true) {
+          console.log('🤖 Auto-enabling AI for all open tickets on logout...');
+          const ticketsRef = collection(db, 'companies', currentCompany.id, 'tickets');
+          const openTicketsQuery = query(ticketsRef, where('status', 'in', ['open', 'pending']));
+          const ticketsSnap = await getDocs(openTicketsQuery);
+          
+          const updatePromises = [];
+          for (const ticketDoc of ticketsSnap.docs) {
+            updatePromises.push(
+              updateDoc(ticketDoc.ref, {
+                aiEnabled: true,
+                updatedAt: new Date(),
+              })
+            );
+          }
+          await Promise.all(updatePromises);
+          console.log(`✅ AI auto-enabled for ${ticketsSnap.size} tickets`);
+        }
+        
+        // Wait a moment to ensure Firestore writes complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log('✅ All status updates completed');
+      }
+      
+      // STEP 3: Now sign out
+      console.log('🔐 Signing out from Firebase Auth...');
+      await signOut(auth);
+      console.log('✅ Logout complete');
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+      // Still try to sign out even if status update fails
+      try {
+        console.log('⚠️ Attempting fallback sign out...');
+        await signOut(auth);
+      } catch (signOutError) {
+        console.error('❌ Fallback sign out also failed:', signOutError);
+      }
+    }
+  }, []);
 
   const value = {
     user,
