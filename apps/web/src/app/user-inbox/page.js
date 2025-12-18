@@ -32,7 +32,7 @@ export default function UserInboxPage() {
   const [agentMessage, setAgentMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [newAssignments, setNewAssignments] = useState(new Set());
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false); // Start offline, will be set online after 20s delay
   const [debugMode, setDebugMode] = useState(false);
   const [loadingError, setLoadingError] = useState(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
@@ -322,24 +322,34 @@ export default function UserInboxPage() {
     return () => clearTimeout(timeout);
   }, [loading]);
 
-  // Set initial online status for respondents
+  // Set initial online status for respondents with 20 second delay
   useEffect(() => {
+    let onlineTimeout;
+    let statusInterval;
+    
     if (userRole === 'respondent' && !loading && user?.email) {
-      updateRespondentStatus(true, false).catch(error => {
-        console.error('Failed to set initial online status:', error);
-      });
-      setIsOnline(true);
-
-      // Set up periodic online status updates
-      const interval = setInterval(() => {
-        if (isOnline) {
+      console.log(`⏳ Will set respondent ${user.email} as online in 20 seconds...`);
+      
+      // Set online after 20 second delay
+      onlineTimeout = setTimeout(() => {
+        console.log(`🟢 Setting respondent ${user.email} as online after 20s delay`);
+        updateRespondentStatus(true, true).catch(error => {
+          console.error('Failed to set initial online status:', error);
+        });
+        setIsOnline(true);
+        
+        // Set up periodic online status updates
+        statusInterval = setInterval(() => {
           updateRespondentStatus(true, false).catch(error => {
             console.error('Failed to update periodic online status:', error);
           });
-        }
-      }, 90000);
+        }, 90000);
+      }, 20000); // 20 second delay
 
-      return () => clearInterval(interval);
+      return () => {
+        if (onlineTimeout) clearTimeout(onlineTimeout);
+        if (statusInterval) clearInterval(statusInterval);
+      };
     }
   }, [userRole, loading, user?.email, updateRespondentStatus]);
 

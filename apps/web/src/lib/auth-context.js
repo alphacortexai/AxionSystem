@@ -161,16 +161,11 @@ export function AuthProvider({ children }) {
           );
 
           if (userAsRespondent) {
-            // Set respondent as online by default when they log in
-            await updateDoc(userAsRespondent.ref, {
-              isOnline: true,
-              lastSeen: new Date(),
-            });
-
+            // Don't set online immediately - will be set after 20s delay in selectCompanyContext
             otherRespondentCompanies.push({
               id: companyDoc.id,
               ...companyDoc.data(),
-              respondentData: { id: userAsRespondent.id, ...userAsRespondent.data(), isOnline: true },
+              respondentData: { id: userAsRespondent.id, ...userAsRespondent.data(), isOnline: false },
               userRole: 'respondent'
             });
           }

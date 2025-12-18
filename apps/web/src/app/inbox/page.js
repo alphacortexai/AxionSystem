@@ -36,7 +36,7 @@ export default function InboxPage() {
   const [isTogglingAI, setIsTogglingAI] = useState(false);
   const [newAssignments, setNewAssignments] = useState(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false); // Start offline, will be set online after 20s delay
   const [debugMode, setDebugMode] = useState(false); // Temporary debug mode
   const [loadingError, setLoadingError] = useState(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
@@ -574,28 +574,34 @@ export default function InboxPage() {
     };
   }, [loading, company, user]);
 
-  // Set initial online status for respondents
+  // Set initial online status for respondents with 20 second delay
   useEffect(() => {
+    let onlineTimeout;
+    let statusInterval;
+    
     if (isRespondent && !loading && user?.email) {
-      console.log(`🟢 [${new Date().toISOString()}] Setting respondent ${user.email} as online initially`);
-      // Track if they were previously offline to know when they come online
-      const wasOffline = !isOnline;
-      // Don't await - fire and forget to prevent blocking
-      updateRespondentStatus(true, wasOffline).catch(error => {
-        console.error('Failed to set initial online status:', error);
-      });
-      setIsOnline(true);
-
-      // Set up periodic online status updates every 1.5 minutes (90 seconds)
-      const interval = setInterval(() => {
-        if (isOnline) {
+      console.log(`⏳ [${new Date().toISOString()}] Will set respondent ${user.email} as online in 20 seconds...`);
+      
+      // Set online after 20 second delay
+      onlineTimeout = setTimeout(() => {
+        console.log(`🟢 [${new Date().toISOString()}] Setting respondent ${user.email} as online after 20s delay`);
+        updateRespondentStatus(true, true).catch(error => {
+          console.error('Failed to set initial online status:', error);
+        });
+        setIsOnline(true);
+        
+        // Set up periodic online status updates every 1.5 minutes (90 seconds)
+        statusInterval = setInterval(() => {
           updateRespondentStatus(true, false).catch(error => {
             console.error('Failed to update periodic online status:', error);
           });
-        }
-      }, 90000); // 90 seconds (1.5 minutes)
+        }, 90000); // 90 seconds (1.5 minutes)
+      }, 20000); // 20 second delay
 
-      return () => clearInterval(interval);
+      return () => {
+        if (onlineTimeout) clearTimeout(onlineTimeout);
+        if (statusInterval) clearInterval(statusInterval);
+      };
     }
   }, [isRespondent, loading, user?.email]); // Removed updateRespondentStatus from deps to prevent loops
 
